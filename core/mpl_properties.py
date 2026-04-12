@@ -15,12 +15,12 @@ def get_color_list():
 
 
 def get_marker_list():
-    markers = ['None'] + [f'{k} ({v})' for k, v in ml.Line2D.markers.items()]
+    markers = ['None'] + [f'{k}' for k in ml.Line2D.markers.keys()]
     return markers
 
 
 def get_line_list():
-    return ['None', 'solid', 'dashed', 'dotted', 'dashdot', 'custom']
+    return ['None', 'solid', 'dashed', 'dotted', 'dashdot']
 
 
 def get_colormap_list():
