@@ -20,7 +20,7 @@ def get_marker_list():
 
 
 def get_line_list():
-    return ['None', 'solid', 'dashed', 'dotted', 'dashdot']
+    return ['None', '-', '--', ':', '-.']
 
 
 def get_colormap_list():

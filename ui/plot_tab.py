@@ -201,7 +201,8 @@ class PlotTab(QWidget):
         for i, icolor in enumerate(colors):
             if icolor.startswith('- '):
                 self.combobox_marker_color.model().item(i).setEnabled(False)
-        index = self.combobox_marker_color.findText('tab:blue')
+        index = self.combobox_marker_color.findText(
+            self.pm.plots[self.selected].marker_color)
         if index >= 0:
             self.combobox_marker_color.setCurrentIndex(index)
         self.combobox_marker_color.currentTextChanged.connect(
@@ -249,6 +250,10 @@ class PlotTab(QWidget):
         self.combobox_line_style = QComboBox()
         styles = get_line_list()
         self.combobox_line_style.addItems(styles)
+        index = self.combobox_line_style.findText(
+            self.pm.plots[self.selected].line_style)
+        if index >= 0:
+            self.combobox_line_style.setCurrentIndex(index)
         self.combobox_line_style.currentTextChanged.connect(
             self.on_changed_line_style)
         self.layout_line1.addWidget(self.combobox_line_style)
@@ -261,7 +266,8 @@ class PlotTab(QWidget):
         for i, icolor in enumerate(colors):
             if icolor.startswith('- '):
                 self.combobox_line_color.model().item(i).setEnabled(False)
-        index = self.combobox_line_color.findText('tab:blue')
+        index = self.combobox_line_color.findText(
+            self.pm.plots[self.selected].line_color)
         if index >= 0:
             self.combobox_line_color.setCurrentIndex(index)
         self.combobox_line_color.currentTextChanged.connect(
