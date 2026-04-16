@@ -37,6 +37,17 @@ class PlotSettings:
     def check_default_color(self, color):
         return color == self.default_colors[self.id]
 
+    def plot_kwargs(self):
+        return {
+            'marker': self.marker_style,
+            'ms': self.marker_size,
+            'mec': self.marker_color,
+            'mfc': self.marker_color,
+            'ls': self.line_style,
+            'lw': self.line_width,
+            'c': self.line_color,
+        }
+
 
 @dataclass
 class PlotManager:

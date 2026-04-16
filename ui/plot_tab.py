@@ -507,28 +507,11 @@ class PlotTab(QWidget):
             yscale2 = 'log' if self.pm.is_y2log else 'linear'
             self.ax2.set_yscale(yscale2)
             for ip in self.pm.plots:
-                if ip.yaxis == 0:
-                    self.canvas.ax.plot(
-                        ip.x, ip.y,
-                        marker=ip.marker_style, ms=ip.marker_size,
-                        mec=ip.marker_color, mfc=ip.marker_color,
-                        ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
-                    )
-                else:
-                    self.ax2.plot(
-                        ip.x, ip.y,
-                        marker=ip.marker_style, ms=ip.marker_size,
-                        mec=ip.marker_color, mfc=ip.marker_color,
-                        ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
-                    )
+                ax = self.canvas.ax if ip.yaxis == 0 else self.ax2
+                ax.plot(ip.x, ip.y, **ip.plot_kwargs())
         else:
             self.ax2 = None
             for ip in self.pm.plots:
-                self.canvas.ax.plot(
-                    ip.x, ip.y,
-                    marker=ip.marker_style, ms=ip.marker_size,
-                    mec=ip.marker_color, mfc=ip.marker_color,
-                    ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
-                )
+                self.canvas.ax.plot(ip.x, ip.y, **ip.plot_kwargs())
 
         self.canvas.draw()
