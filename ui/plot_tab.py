@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from core.mpl_properties import get_color_list, get_marker_list, get_line_list
 from core.plot_class import PlotManager
+from core.plot_generator import CodeGenerator
 from ui.aspect_ratio import AspectRatioWidget
 
 
@@ -513,5 +514,8 @@ class PlotTab(QWidget):
             self.ax2 = None
             for ip in self.pm.plots:
                 self.canvas.ax.plot(ip.x, ip.y, **ip.plot_kwargs())
+
+        code = CodeGenerator()
+        self.text_code.setPlainText(code.generate(self.pm))
 
         self.canvas.draw()
