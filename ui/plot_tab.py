@@ -31,6 +31,7 @@ class PlotTab(QWidget):
 
         # canvas
         self.canvas = canvas
+        self.ax2 = None
         canvas.setSizePolicy(
             QSizePolicy.Expanding,
             QSizePolicy.Expanding
@@ -332,6 +333,13 @@ class PlotTab(QWidget):
         self.set_current_values(self.pm.plots[self.selected])
 
     def set_current_values(self, plot):
+        if self.pm.has_twin_axes:
+            if plot.yaxis == 0:
+                self.radio_axis1.setChecked(True)
+                self.radio_axis2.setChecked(False)
+            else:
+                self.radio_axis1.setChecked(False)
+                self.radio_axis2.setChecked(True)
         idx = self.combobox_marker_style.findText(plot.marker_style)
         if idx >= 0:
             self.combobox_marker_style.setCurrentIndex(idx)
@@ -380,26 +388,34 @@ class PlotTab(QWidget):
 
     def changed_title(self, title):
         self.pm.title = title
+        self.update_plot()
 
     def changed_xaxis(self, xlabel):
         self.pm.label_xaxis = xlabel
+        self.update_plot()
 
     def changed_yaxis(self, ylabel):
         self.pm.label_yaxis = ylabel
+        self.update_plot()
 
     def on_toggle_grid(self, state):
         self.pm.has_grid = state
+        self.update_plot()
 
     def on_toggle_xaxis(self, state):
         self.pm.is_xlog = state
+        self.update_plot()
 
     def on_toggle_yaxis(self, state):
         self.pm.is_y1log = state
+        self.update_plot()
 
     def on_toggle_yaxis2(self, state):
         self.pm.is_y2log = state
+        self.update_plot()
 
     def on_toggle_2axes(self, state):
+        self.pm.has_twin_axes = state
         self.stack_radio_axis1.setCurrentIndex(1 if state else 0)
         self.stack_radio_axis2.setCurrentIndex(1 if state else 0)
         self.radio_axis1.setChecked(True)
@@ -411,6 +427,7 @@ class PlotTab(QWidget):
             self.pm.plots[self.selected].yaxis = 0
         elif self.radio_axis2.isChecked():
             self.pm.plots[self.selected].yaxis = 1
+        self.update_plot()
 
     def on_changed_marker_style(self, style):
         self.pm.plots[self.selected].marker_style = style
@@ -465,13 +482,53 @@ class PlotTab(QWidget):
         self.update_plot()
 
     def update_plot(self):
+        self.pm.normalize()
         self.canvas.ax.axis('on')
         self.canvas.ax.cla()
-        for ip in self.pm.plots:
-            self.canvas.ax.plot(
-                ip.x, ip.y,
-                marker=ip.marker_style, ms=ip.marker_size,
-                mec=ip.marker_color, mfc=ip.marker_color,
-                ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
-            )
+        if self.pm.need_two_axes():
+            if self.ax2 is None:
+                self.ax2 = self.canvas.ax.twinx()
+            else:
+                self.ax2.cla()
+        else:
+            if self.ax2 is not None:
+                self.ax2.remove()
+                self.ax2 = None
+        self.canvas.ax.grid(self.pm.has_grid)
+        self.canvas.ax.set_title(self.pm.title)
+        self.canvas.ax.set_xlabel(self.pm.label_xaxis)
+        self.canvas.ax.set_ylabel(self.pm.label_yaxis)
+
+        xscale = 'log' if self.pm.is_xlog else 'linear'
+        self.canvas.ax.set_xscale(xscale)
+        yscale1 = 'log' if self.pm.is_y1log else 'linear'
+        self.canvas.ax.set_yscale(yscale1)
+        if self.pm.need_two_axes():
+            yscale2 = 'log' if self.pm.is_y2log else 'linear'
+            self.ax2.set_yscale(yscale2)
+            for ip in self.pm.plots:
+                if ip.yaxis == 0:
+                    self.canvas.ax.plot(
+                        ip.x, ip.y,
+                        marker=ip.marker_style, ms=ip.marker_size,
+                        mec=ip.marker_color, mfc=ip.marker_color,
+                        ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
+                    )
+                else:
+                    self.ax2.plot(
+                        ip.x, ip.y,
+                        marker=ip.marker_style, ms=ip.marker_size,
+                        mec=ip.marker_color, mfc=ip.marker_color,
+                        ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
+                    )
+        else:
+            self.ax2 = None
+            for ip in self.pm.plots:
+                self.canvas.ax.plot(
+                    ip.x, ip.y,
+                    marker=ip.marker_style, ms=ip.marker_size,
+                    mec=ip.marker_color, mfc=ip.marker_color,
+                    ls=ip.line_style, lw=ip.line_width, c=ip.line_color,
+                )
+
         self.canvas.draw()

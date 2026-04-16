@@ -31,20 +31,8 @@ class PlotSettings:
     def __post_init__(self):
         self.marker_color = self.default_colors[self.id]
         self.line_color = self.default_colors[self.id]
-        self.x = np.arange(10)
-        self.y = np.random.rand(10) + (self.id + 1)
-
-    def switch_logy(self, is_log):
-        if is_log:
-            self.y = np.pow(10, self.y)
-        else:
-            self.y = np.log10(10, self.y)
-
-    def switch_logx(self, is_log):
-        if is_log:
-            self.x = np.pow(10, self.x / 5)
-        else:
-            self.x = np.log10(10, self.x) * 5
+        self.x = np.arange(100)
+        self.y = np.random.rand(100) + (self.id + 1)
 
     def check_default_color(self, color):
         return color == self.default_colors[self.id]
@@ -76,20 +64,6 @@ class PlotManager:
     def nplots(self):
         return len(self.plots)
 
-    def set_logx(self, is_log):
-        for ip in self.plots:
-            ip.switch_logx(is_log)
-
-    def set_logy1(self, is_log):
-        for ip in self.plots:
-            if ip.yaxis == 0:
-                ip.switch_logy(is_log)
-
-    def set_logy2(self, is_log):
-        for ip in self.plots:
-            if ip.yaxis == 1:
-                ip.switch_logy(is_log)
-
     def need_two_axes(self):
         if not self.has_twin_axes:
             return False
@@ -98,15 +72,23 @@ class PlotManager:
         return True
 
     def add_plot(self):
-        if len(self.plots) == self.max_nplots:
+        if self.nplots == self.max_nplots:
             return False
-        new_id = len(self.plots)
-        new_plot = f'{self.prefix}{len(self.plots) + 1}'
+        new_id = self.nplots
+        new_plot = f'{self.prefix}{self.nplots + 1}'
         self.plots.append(PlotSettings(id=new_id, name=new_plot))
         return True
 
     def delete_plot(self):
-        if len(self.plots) == self.min_nplots:
+        if self.nplots == self.min_nplots:
             return False
         del self.plots[-1]
         return True
+
+    def normalize(self):
+        if self.has_twin_axes and self.nplots == 1:
+            self.plots[0].yaxis = 0
+
+        if not self.has_twin_axes:
+            for ip in self.plots:
+                ip.yaxis = 0
