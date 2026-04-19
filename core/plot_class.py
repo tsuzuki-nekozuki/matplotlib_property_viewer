@@ -34,8 +34,37 @@ class PlotSettings:
         self.x = np.arange(100)
         self.y = np.random.rand(100) + (self.id + 1)
 
-    def check_default_color(self, color):
-        return color == self.default_colors[self.id]
+    def is_default_marker_style(self):
+        return self.marker_style == 'None'
+
+    def is_default_marker_color(self):
+        return self.marker_color == self.default_colors[self.id]
+
+    def is_default_marker_size(self):
+        return self.marker_size == plt.rcParams['lines.markersize']
+
+    def is_default_line_style(self):
+        return self.line_style == plt.rcParams['lines.linestyle']
+
+    def is_default_line_color(self):
+        return self.line_color == self.default_colors[self.id]
+
+    def is_default_line_width(self):
+        return self.line_width == plt.rcParams['lines.linewidth']
+
+    def is_base_color(self, color):
+        return color in mc.BASE_COLORS.keys()
+
+    def has_same_base_color(self):
+        if self.marker_color != self.line_color:
+            return False
+        if not self.marker_color in mc.BASE_COLORS.keys():
+            return False
+        if self.marker_style == 'None' or self.marker_size == 0:
+            return False
+        if self.line_style == 'None' or self.line_width == 0:
+            return False
+        return True
 
     def plot_kwargs(self):
         return {
@@ -103,3 +132,4 @@ class PlotManager:
         if not self.has_twin_axes:
             for ip in self.plots:
                 ip.yaxis = 0
+        

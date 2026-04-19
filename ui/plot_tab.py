@@ -6,7 +6,8 @@ from PySide6.QtCore import Qt, QStringListModel, QItemSelectionModel
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QSlider,
     QDoubleSpinBox, QLineEdit, QPushButton, QCheckBox, QListView, QButtonGroup,
-    QPlainTextEdit, QRadioButton, QStackedWidget, QSplitter, QSizePolicy
+    QPlainTextEdit, QRadioButton, QStackedWidget, QSplitter, QSizePolicy,
+    QApplication
 )
 
 from core.mpl_properties import get_color_list, get_marker_list, get_line_list
@@ -316,6 +317,11 @@ class PlotTab(QWidget):
         self.text_code.setFixedWidth(340)
         self.text_code.setPlainText('This is a text.')
         self.layout_options.addWidget(self.text_code, stretch=1)
+        self.button_copy = QPushButton('Copy')
+        self.button_copy.setFixedWidth(80)
+        self.button_copy.clicked.connect(self.on_button_copy_clicked)
+        self.layout_options.addWidget(
+            self.button_copy, alignment=Qt.AlignRight)
 
         # layouts
         self.layout.addWidget(split_options)
@@ -519,3 +525,7 @@ class PlotTab(QWidget):
         self.text_code.setPlainText(code.generate(self.pm))
 
         self.canvas.draw()
+
+    def on_button_copy_clicked(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.text_code.toPlainText())

@@ -1,11 +1,13 @@
+from core.base_generator import BaseGenerator
 from core.plot_class import PlotManager, PlotSettings
 
 
-class CodeGenerator:
+class CodeGenerator(BaseGenerator):
     def generate(self, manager: PlotManager) -> str:
         lines = []
 
         lines.append('import matplotlib.pyplot as plt')
+        lines.append('')
         lines.append('')
 
         lines.append('fig, ax1 = plt.subplots()')
@@ -13,9 +15,9 @@ class CodeGenerator:
         if manager.has_twin_axes:
             lines.append('ax2 = ax1.twinx()')
 
-        for plot in manager.plots:
-            ax = 'ax1' if plot.yaxis == 0 else 'ax2'
-            lines.append(self._plot_line(plot, ax))
+        for iplot in manager.plots:
+            ax = 'ax1' if iplot.yaxis == 0 else 'ax2'
+            lines.append(self._plot_line(iplot, ax))
 
         if manager.has_grid:
             lines.append('ax1.grid(True)')
@@ -25,4 +27,35 @@ class CodeGenerator:
         return '\n'.join(lines)
 
     def _plot_line(self, plot: PlotSettings, ax: str) -> str:
-        return (f'{ax}.plot(x, y, color="{plot.line_color}", linestyle="{plot.line_style}")')
+        if ((plot.marker_size == 0 or plot.marker_style == 'None') and
+                (plot.line_width == 0 or plot.line_style == 'None')):
+            msg_invisible = (
+                f'# {plot.name} is invisible because marker and line settings'
+                'are both not visibly set.'
+            )
+            return msg_invisible
+        code_data = f'x{plot.id + 1}, y{plot.id + 1}'
+        code_mc = ''
+        code_lc = ''
+        if not plot.has_same_base_color():
+            if (plot.marker_style != 'None' and
+                    not plot.is_default_marker_color()):
+                code_mc = f'mec="{plot.marker_color}", '
+                code_mc = code_mc + f'mfc="{plot.marker_color}"'
+            if (plot.line_style != 'None' and
+                    not plot.is_default_line_color()):
+                code_lc = f'c="{plot.line_color}"'
+        c = plot.marker_color if plot.has_same_base_color() else ''
+        m = '' if plot.marker_style == 'None' else plot.marker_style
+        l = '' if plot.line_style == 'None' else plot.line_style
+        code_fmt =  f'"{c}{m}{l}"'
+        code_ms = ''
+        if not plot.is_default_marker_size():
+            code_ms = f'ms={round(plot.marker_size, 1)}'
+        code_lw = ''
+        if not plot.is_default_line_width():
+            code_lw = f'ms={round(plot.line_width, 1)}'
+        codes = [code_data, code_fmt, code_mc, code_lc, code_ms, code_lw]
+        codes = [i for i in codes if i != '']
+        return f'{ax}.plot(' + ', '.join(codes) + ')'
+
