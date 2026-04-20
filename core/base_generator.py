@@ -1,10 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class BaseGenerator(metaclass=ABCMeta):
+class BaseGenerator(ABC):
     @abstractmethod
     def generate(self):
-        pass
+        raise NotImplementedError('Subclasses must implement generate().')
 
     def __call__(self):
-        self.generate()
+        return self.generate()
