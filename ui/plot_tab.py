@@ -54,7 +54,6 @@ class PlotTab(QWidget):
         # plots list
         self.layout_plots_list = QVBoxLayout()
 
-        self.layout_plots_list_title = QHBoxLayout()
         self.label_plots_list = QLabel(
             f'Plots list (max: {self.pm.max_nplots})')
         self.label_plots_list.setStyleSheet('font-size: 18px;')
