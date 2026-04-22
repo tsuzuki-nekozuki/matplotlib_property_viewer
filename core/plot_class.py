@@ -87,6 +87,7 @@ class PlotManager:
     title: str = field(init=False, default='')
     label_xaxis: str = field(init=False, default='')
     label_yaxis: str = field(init=False, default='')
+    label_yaxis2: str = field(init=False, default='')
     has_grid: bool = field(init=False, default=False)
     has_twin_axes: bool = field(init=False, default=False)
     is_xlog: bool = field(init=False, default=False)
@@ -132,4 +133,3 @@ class PlotManager:
         if not self.has_twin_axes:
             for ip in self.plots:
                 ip.yaxis = 0
-        

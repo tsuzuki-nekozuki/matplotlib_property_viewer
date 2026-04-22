@@ -132,6 +132,29 @@ class PlotTab(QWidget):
         self.layout_yaxis.addWidget(self.text_yaxis)
         self.layout_options.addLayout(self.layout_yaxis)
 
+        self.stack_yaxis2 = QStackedWidget()
+        self.widget_yaxis2_vis = QWidget()
+        self.layout_yaxis2_vis = QHBoxLayout(self.widget_yaxis2_vis)
+        self.label_text_yaxis2 = QLabel('y2-axis')
+        self.label_text_yaxis2.setFixedWidth(50)
+        self.layout_yaxis2_vis.addWidget(self.label_text_yaxis2)
+        self.text_yaxis2 = QLineEdit()
+        self.text_yaxis2.setFixedWidth(240)
+        self.text_yaxis2.textChanged.connect(self.changed_yaxis2)
+        self.layout_yaxis2_vis.addWidget(self.text_yaxis2)
+        self.widget_yaxis2_inv = QWidget()
+        self.layout_yaxis2_inv = QHBoxLayout(self.widget_yaxis2_inv)
+        self.empty3 = QWidget()
+        self.empty3.setFixedWidth(50)
+        self.layout_yaxis2_inv.addWidget(self.empty3)
+        self.empty4 = QWidget()
+        self.empty4.setFixedWidth(240)
+        self.layout_yaxis2_inv.addWidget(self.empty4)
+        self.stack_yaxis2.addWidget(self.widget_yaxis2_inv)
+        self.stack_yaxis2.addWidget(self.widget_yaxis2_vis)
+        self.stack_yaxis2.setCurrentIndex(0)
+        self.layout_options.addWidget(self.stack_yaxis2)
+
         self.layout_plot_setting = QVBoxLayout()
         self.layout_grid_axes = QHBoxLayout()
         self.checkbox_grid = QCheckBox('add grid')
@@ -405,6 +428,10 @@ class PlotTab(QWidget):
         self.pm.label_yaxis = ylabel
         self.update_plot()
 
+    def changed_yaxis2(self, ylabel2):
+        self.pm.label_yaxis2 = ylabel2
+        self.update_plot()
+
     def on_toggle_grid(self, state):
         self.pm.has_grid = state
         self.update_plot()
@@ -425,6 +452,7 @@ class PlotTab(QWidget):
         self.pm.has_twin_axes = state
         self.stack_radio_axis1.setCurrentIndex(1 if state else 0)
         self.stack_radio_axis2.setCurrentIndex(1 if state else 0)
+        self.stack_yaxis2.setCurrentIndex(1 if state else 0)
         self.radio_axis1.setChecked(True)
         self.checkbox_yaxis2_logscale.setVisible(state)
         self.checkbox_yaxis2_logscale.setChecked(False)
@@ -492,12 +520,7 @@ class PlotTab(QWidget):
         self.pm.normalize()
         self.canvas.ax.axis('on')
         self.canvas.ax.cla()
-        if self.pm.need_two_axes():
-            if self.ax2 is None:
-                self.ax2 = self.canvas.ax.twinx()
-            else:
-                self.ax2.cla()
-        else:
+        if not self.pm.need_two_axes():
             if self.ax2 is not None:
                 self.ax2.remove()
                 self.ax2 = None
@@ -506,13 +529,16 @@ class PlotTab(QWidget):
         self.canvas.ax.set_xlabel(self.pm.label_xaxis)
         self.canvas.ax.set_ylabel(self.pm.label_yaxis)
 
-        xscale = 'log' if self.pm.is_xlog else 'linear'
-        self.canvas.ax.set_xscale(xscale)
-        yscale1 = 'log' if self.pm.is_y1log else 'linear'
-        self.canvas.ax.set_yscale(yscale1)
+        self.canvas.ax.set_xscale('log' if self.pm.is_xlog else 'linear')
+        self.canvas.ax.set_yscale('log' if self.pm.is_y1log else 'linear')
         if self.pm.need_two_axes():
-            yscale2 = 'log' if self.pm.is_y2log else 'linear'
-            self.ax2.set_yscale(yscale2)
+            if self.ax2 is None:
+                self.ax2 = self.canvas.ax.twinx()
+            else:
+                self.ax2.cla()
+            self.ax2.set_ylabel(self.pm.label_yaxis2)
+            self.ax2.yaxis.set_label_position('right')
+            self.ax2.set_yscale('log' if self.pm.is_y2log else 'linear')
             for ip in self.pm.plots:
                 ax = self.canvas.ax if ip.yaxis == 0 else self.ax2
                 ax.plot(ip.x, ip.y, **ip.plot_kwargs())

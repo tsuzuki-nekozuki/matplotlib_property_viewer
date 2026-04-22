@@ -10,21 +10,45 @@ class CodeGenerator(BaseGenerator):
         lines.append('')
         lines.append('')
 
-        lines.append('fig, ax1 = plt.subplots()')
-
-        if manager.has_twin_axes:
-            lines.append('ax2 = ax1.twinx()')
-
+        lines.extend(self._set_axes(manager))
+        lines.extend(self._write_labels(manager))
         for iplot in manager.plots:
             ax = 'ax1' if iplot.yaxis == 0 else 'ax2'
             lines.append(self._plot_line(iplot, ax))
-
-        if manager.has_grid:
-            lines.append('ax1.grid(True)')
-
         lines.append('plt.show()')
 
         return '\n'.join(lines)
+
+    def _set_axes(self, manager: PlotManager):
+        lines = []
+        lines.append('fig, ax1 = plt.subplots()')
+        if manager.need_two_axes():
+            lines.append('ax2 = ax1.twinx()')
+        if manager.is_xlog:
+            lines.append('ax1.set_xscale("log")')
+        if manager.is_y1log:
+            lines.append('ax1.set_yscale("log")')
+        if manager.need_two_axes() and manager.is_y2log:
+            lines.append('ax2.set_yscale("log")')
+        if manager.has_grid:
+            lines.append('ax1.grid(True)')
+        return lines
+
+    def _write_labels(self, manager: PlotManager):
+        lines = []
+        if manager.title != '':
+            title = f'ax1.set_title("{manager.title}")'
+            lines.append(title)
+        if manager.label_xaxis != '':
+            xlabel = f'ax1.set_xlabel("{manager.label_xaxis}")'
+            lines.append(xlabel)
+        if manager.label_yaxis != '':
+            ylabel1 = f'ax1.set_ylabel("{manager.label_yaxis}")'
+            lines.append(ylabel1)
+        if manager.need_two_axes() and manager.label_yaxis2 != '':
+            ylabel2 = f'ax2.set_ylabel("{manager.label_yaxis2}")'
+            lines.append(ylabel2)
+        return lines
 
     def _plot_line(self, plot: PlotSettings, ax: str) -> str:
         if ((plot.marker_size == 0 or plot.marker_style == 'None') and
@@ -48,7 +72,7 @@ class CodeGenerator(BaseGenerator):
         c = plot.marker_color if plot.has_same_base_color() else ''
         m = '' if plot.marker_style == 'None' else plot.marker_style
         l = '' if plot.line_style == 'None' else plot.line_style
-        code_fmt =  f'"{c}{m}{l}"'
+        code_fmt = f'"{c}{m}{l}"'
         code_ms = ''
         if not plot.is_default_marker_size():
             code_ms = f'ms={round(plot.marker_size, 1)}'
@@ -58,4 +82,3 @@ class CodeGenerator(BaseGenerator):
         codes = [code_data, code_fmt, code_mc, code_lc, code_ms, code_lw]
         codes = [i for i in codes if i != '']
         return f'{ax}.plot(' + ', '.join(codes) + ')'
-
