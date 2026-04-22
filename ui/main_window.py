@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QSizePolicy
 from PySide6.QtCore import Qt
@@ -8,7 +7,7 @@ from PySide6.QtGui import QGuiApplication
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 from ui.plot_tab import PlotTab
-from ui.colormap_tab import ColormapTab
+from ui.hist2d_tab import Hist2dTab
 from ui.fonts_tab import FontsTab
 
 
@@ -30,7 +29,7 @@ class MainWindow(QWidget):
         tabs.setMovable(True)
 
         tabs.addTab(PlotTab(MplCanvas()), 'Plot')
-        tabs.addTab(ColormapTab(MplCanvas()), 'Colormap')
+        tabs.addTab(Hist2dTab(MplCanvas()), 'Hist2D')
         tabs.addTab(FontsTab(MplCanvas()), 'Fonts')
 
         layout = QVBoxLayout()
@@ -44,14 +43,3 @@ class MainWindow(QWidget):
         height = int(geometry.height() * 0.8)
 
         self.resize(width, height)
-
-        # initial plot
-        # self.update_plot()
-
-    def on_slider_change(self):
-        self.update_plot()
-
-    def update_plot(self):
-        self.canvas.ax.axis('off')
-
-        self.canvas.draw()

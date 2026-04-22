@@ -326,6 +326,7 @@ class PlotTab(QWidget):
             self.on_spinbox_line_width_changed)
         self.layout_line2.addWidget(self.spinbox_line_width)
         self.layout_options.addLayout(self.layout_line2)
+
         hline3 = QFrame()
         hline3.setFrameShape(QFrame.HLine)
         hline3.setFrameShadow(QFrame.Sunken)
