@@ -28,8 +28,8 @@ class MainWindow(QWidget):
         tabs.setTabPosition(QTabWidget.TabPosition.North)
         tabs.setMovable(True)
 
-        tabs.addTab(PlotTab(MplCanvas()), 'Plot')
         tabs.addTab(Hist2dTab(MplCanvas()), 'Hist2D')
+        tabs.addTab(PlotTab(MplCanvas()), 'Plot')
         tabs.addTab(FontsTab(MplCanvas()), 'Fonts')
 
         layout = QVBoxLayout()
