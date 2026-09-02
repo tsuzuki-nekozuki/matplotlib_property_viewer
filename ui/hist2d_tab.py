@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 
+from matplotlib.colors import LogNorm
+
 from PySide6.QtCore import Qt, QStringListModel, QItemSelectionModel
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QSlider,
@@ -301,8 +303,8 @@ class Hist2dTab(QWidget):
         self.layout_options.addWidget(self.checkbox_zaxis_logscale)
 
         self.checkbox_show_colormap = QCheckBox('Show color map')
-        # self.checkbox_show_colormap.stateChanged.connect(
-        #     self.on_toggle_show_colormap)
+        self.checkbox_show_colormap.stateChanged.connect(
+            self.on_toggle_show_colormap)
         self.layout_options.addWidget(self.checkbox_show_colormap)
 
         hline5 = QFrame()
@@ -419,20 +421,43 @@ class Hist2dTab(QWidget):
         self.colormap = cmap
         self.update_plot()
 
+    def on_toggle_zaxis(self, state):
+        self.h2m.is_zlog = state
+        self.update_plot()
+
+    def on_toggle_show_colormap(self, state):
+        self.h2m.has_colorbar = state
+        self.update_plot()
+
     def update_plot(self):
+        if self.cbar is not None:
+            self.cbar.remove()
+            self.cbar = None
+
         self.canvas.ax.axis('on')
         self.canvas.ax.cla()
-        h2 = self.canvas.ax.hist2d(
-            self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
-            bins=(self.h2m.xbin_count, self.h2m.ybin_count),
-            range=((self.h2m.xmin, self.h2m.xmax),
-                   (self.h2m.ymin, self.h2m.ymax)),
-            cmap=self.colormap)
+        if self.h2m.is_zlog:
+            h2 = self.canvas.ax.hist2d(
+                self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
+                bins=(self.h2m.xbin_count, self.h2m.ybin_count),
+                range=((self.h2m.xmin, self.h2m.xmax),
+                       (self.h2m.ymin, self.h2m.ymax)),
+                cmap=self.colormap,
+                norm=LogNorm())
+        else:
+            h2 = self.canvas.ax.hist2d(
+                self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
+                bins=(self.h2m.xbin_count, self.h2m.ybin_count),
+                range=((self.h2m.xmin, self.h2m.xmax),
+                       (self.h2m.ymin, self.h2m.ymax)),
+                cmap=self.colormap)
         self.canvas.ax.set_title(self.h2m.title)
         self.canvas.ax.set_xlabel(self.h2m.label_xaxis)
         self.canvas.ax.set_ylabel(self.h2m.label_yaxis)
-        self.cbar = self.canvas.fig.colorbar(h2[3], ax=self.canvas.ax)
-        self.cbar.remove()
+        if self.h2m.has_colorbar:
+            self.cbar = self.canvas.fig.colorbar(h2[3], ax=self.canvas.ax)
+        else:
+            self.cbar = None
         self.canvas.draw()
 
     def on_button_copy_clicked(self):
