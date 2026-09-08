@@ -13,19 +13,31 @@ class Hist2dSettings:
     ymin: float = field(init=False, default=-100)
     ymax: float = field(init=False, default=100)
     n_data: int = field(init=False, default=1000000)
+    colormap: str = field(init=False, default=plt.rcParams['image.cmap'])
     data: NDArray[np.float64] = field(
         init=False, default_factory=lambda: np.empty(0, dtype=np.float64))
 
-    def generate(self):
-        self.n_data = int(self.n_data)
-        h_x = (self.xmax - self.xmin) / 2.
-        h_y = (self.ymax - self.ymin) / 2.
+    def __post_init__(self):
+        self.data = self.generate(
+            self.xmin, self.xmax, self.ymin, self.ymax, self.n_data)
+
+    def generate(
+        self,
+        x_min: float,
+        x_max: float,
+        y_min: float,
+        y_max: float,
+        n_data: int
+    ):
+        n_data = int(n_data)
+        half_x = (x_max - x_min) / 2.
+        half_y = (y_max - y_min) / 2.
         n_x = np.random.randint(1, 7)
         n_y = np.random.randint(1, 7)
-        p_x, p_y = self.generate_gaussian_2d(h_x, h_y, n_x, n_y, self.n_data)
-        p_x = p_x + (self.xmax + self.xmin) / 2.
-        p_y = p_y + (self.ymax + self.ymin) / 2.
-        self.data = np.array([p_x, p_y]).swapaxes(0, 1)
+        p_x, p_y = self.generate_gaussian_2d(half_x, half_y, n_x, n_y, n_data)
+        p_x = p_x - (x_max + x_min) / 2.
+        p_y = p_y - (y_max + y_min) / 2.
+        return np.array([p_x, p_y]).swapaxes(0, 1)
 
     def generate_gaussian_2d(
         self,
@@ -72,6 +84,7 @@ class Hist2dManager:
     ymin: float = field(init=False, default=-100)
     ymax: float = field(init=False, default=100)
     ybin_count: int = field(init=False, default=20)
+    # colormap: str = field(init=False, default=plt.rcParams['image.cmap'])
     zmin: int = field(init=False, default=0)
     zmax: int = field(init=False, default=0)
     title: str = field(init=False, default='')
@@ -84,14 +97,13 @@ class Hist2dManager:
     def __post_init__(self):
         self.generate_data()
 
-    def generate_data(self):
-        self.hist.generate()
+    def generate_data(self, n: int = 1000000):
+        self.hist.generate(self.xmin, self.xmax, self.ymin, self.ymax, n)
+    
+    @property
+    def colormap(self) -> str:
+        return self.hist.colormap
 
-    def convert_to_width(self, axis: str):
-        if axis == 'x':
-            span = self.xmax - self.xmin
-            cnt = self.xbin_count
-        else:
-            span = self.ymax - self.ymin
-            cnt = self.ybin_count
-        return np.ceil(span / cnt)
+    @colormap.setter
+    def colormap(self, value: str):
+        self.hist.colormap = value

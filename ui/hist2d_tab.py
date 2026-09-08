@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.hist2d_class import Hist2dManager
+from core.hist2d_generator import Hist2dCodeGenerator
 from core.mpl_properties import get_colormap_list
 from ui.aspect_ratio import AspectRatioWidget
 
@@ -28,7 +29,7 @@ class Hist2dTab(QWidget):
         # Hist2dManager
         self.h2m = Hist2dManager()
         # Default plot index
-        self.colormap = 'viridis'
+        # self.colormap = plt.rcParams['image.cmap']
         self.xbin_width = None
         self.ybin_width = None
         self.ndata = 0
@@ -289,7 +290,7 @@ class Hist2dTab(QWidget):
         self.combobox_colormap = QComboBox()
         colormap = get_colormap_list()
         self.combobox_colormap.addItems(colormap)
-        index = self.combobox_colormap.findText(self.colormap)
+        index = self.combobox_colormap.findText(self.h2m.colormap)
         if index >= 0:
             self.combobox_colormap.setCurrentIndex(index)
         self.combobox_colormap.currentTextChanged.connect(
@@ -418,7 +419,7 @@ class Hist2dTab(QWidget):
         return (self.h2m.ymax - self.h2m.ymin) / self.h2m.ybin_count
 
     def on_changed_colormap(self, cmap):
-        self.colormap = cmap
+        self.h2m.colormap = cmap
         self.update_plot()
 
     def on_toggle_zaxis(self, state):
@@ -442,15 +443,17 @@ class Hist2dTab(QWidget):
                 bins=(self.h2m.xbin_count, self.h2m.ybin_count),
                 range=((self.h2m.xmin, self.h2m.xmax),
                        (self.h2m.ymin, self.h2m.ymax)),
-                cmap=self.colormap,
+                cmap=self.h2m.colormap,
                 norm=LogNorm())
         else:
             h2 = self.canvas.ax.hist2d(
                 self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
                 bins=(self.h2m.xbin_count, self.h2m.ybin_count),
-                range=((self.h2m.xmin, self.h2m.xmax),
-                       (self.h2m.ymin, self.h2m.ymax)),
-                cmap=self.colormap)
+                range=(
+                    (self.h2m.xmin, self.h2m.xmax),
+                    (self.h2m.ymin, self.h2m.ymax)
+                ),
+                cmap=self.h2m.colormap)
         self.canvas.ax.set_title(self.h2m.title)
         self.canvas.ax.set_xlabel(self.h2m.label_xaxis)
         self.canvas.ax.set_ylabel(self.h2m.label_yaxis)
@@ -458,8 +461,12 @@ class Hist2dTab(QWidget):
             self.cbar = self.canvas.fig.colorbar(h2[3], ax=self.canvas.ax)
         else:
             self.cbar = None
+
+        code = Hist2dCodeGenerator()
+        self.text_code.setPlainText(code.generate(self.h2m))
+
         self.canvas.draw()
 
     def on_button_copy_clicked(self):
         clipboard = QApplication.clipboard()
-        clipboard.setText('hello')
+        clipboard.setText(self.text_code.toPlainText())
