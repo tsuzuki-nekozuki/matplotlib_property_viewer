@@ -31,3 +31,11 @@ def get_fonts_list():
     ttf = set([f.name for f in fm.fontManager.ttflist])
     # afm = set([f.name for f in fm.fontManager.afmlist])
     return list(ttf)
+
+
+def get_font_style_list():
+    return ['normal', 'italic', 'oblique']
+
+
+def get_font_weight_list():
+    return ['light', 'normal', 'medium', 'bold', 'heavy']
