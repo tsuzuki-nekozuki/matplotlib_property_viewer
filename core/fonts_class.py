@@ -114,7 +114,6 @@ class FontsManager:
         for k, v in self.default_rcparams.items():
             if isinstance(v['Size'], str):
                 v['Size'] = self.get_font_size_value(v['Size'])
-        print(self.default_rcparams)
 
     def get_font_size_value(self, font_size):
         return FontProperties(font_size).get_size_in_points()
