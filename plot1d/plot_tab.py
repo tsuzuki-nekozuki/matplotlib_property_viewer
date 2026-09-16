@@ -159,6 +159,78 @@ class PlotTab(QWidget):
         layout_plots_list.addLayout(layout_plots_buttons)
         self.layout_options.addLayout(layout_plots_list)
 
+    def update_view_plots(self):
+        self.list_plots.setStringList(self.pm.plot_names)
+        self.view_plots.setModel(self.list_plots)
+        self.update_plot()
+
+    def on_update_plots_list(self, first):
+        idx = first.row()
+        new_plot_name = self.list_plots.data(first)
+        self.pm.plot_names[idx] = new_plot_name
+        self.update_view_plots()
+
+    def on_view_plots_selected(self, current):
+        self.selected = current.row()
+        self.set_current_values(self.pm.plots[self.selected])
+
+    def set_current_values(self, plot):
+        if self.pm.has_twin_axes:
+            if plot.yaxis == 0:
+                self.radio_axis1.setChecked(True)
+                self.radio_axis2.setChecked(False)
+            else:
+                self.radio_axis1.setChecked(False)
+                self.radio_axis2.setChecked(True)
+        idx = self.combobox_marker_style.findText(plot.marker_style)
+        if idx >= 0:
+            self.combobox_marker_style.setCurrentIndex(idx)
+        idx = self.combobox_marker_color.findText(plot.marker_color)
+        if idx >= 0:
+            self.combobox_marker_color.setCurrentIndex(idx)
+        self.slider_marker_size.setValue(plot.marker_size * 10)
+        self.spinbox_marker_size.setValue(plot.marker_size)
+        idx = self.combobox_line_style.findText(plot.line_style)
+        if idx >= 0:
+            self.combobox_line_style.setCurrentIndex(idx)
+        idx = self.combobox_line_color.findText(plot.line_color)
+        if idx >= 0:
+            self.combobox_line_color.setCurrentIndex(idx)
+        self.slider_line_width.setValue(plot.line_width * 10)
+        self.spinbox_line_width.setValue(plot.line_width)
+
+    def on_button_add_clicked(self):
+        if not self.pm.add_plot():
+            return
+        self.update_view_plots()
+        # Select new plot
+        idx = self.list_plots.index(self.pm.nplots - 1, 0)
+        self.view_plots.selectionModel().setCurrentIndex(
+            idx, QItemSelectionModel.ClearAndSelect)
+
+    def on_button_delete_clicked(self):
+        # Get current selected plot
+        idx = self.view_plots.selectionModel().currentIndex()
+        current_row = idx.row()
+        if not self.pm.delete_plot():
+            return
+        self.update_view_plots()
+        # Select current plot; if deleted select the last plot
+        if current_row >= self.pm.nplots:
+            current_row = self.pm.nplots - 1
+        idx = self.list_plots.index(current_row, 0)
+        self.view_plots.selectionModel().setCurrentIndex(
+            idx, QItemSelectionModel.ClearAndSelect)
+
+    def on_toggle_2axes(self, state):
+        self.pm.has_twin_axes = state
+        self.stack_radio_axis1.setCurrentIndex(1 if state else 0)
+        self.stack_radio_axis2.setCurrentIndex(1 if state else 0)
+        self.stack_yaxis2.setCurrentIndex(1 if state else 0)
+        self.radio_axis1.setChecked(True)
+        self.checkbox_yaxis2_logscale.setVisible(state)
+        self.checkbox_yaxis2_logscale.setChecked(False)
+
     def construct_title_and_axis(self):
         label_title_and_axis = QLabel('Title and Axis')
         label_title_and_axis.setStyleSheet('font-size: 18px;')
@@ -196,6 +268,18 @@ class PlotTab(QWidget):
         layout_yaxis.addWidget(self.text_yaxis)
         self.layout_options.addLayout(layout_yaxis)
 
+    def changed_title(self, title):
+        self.pm.title = title
+        self.update_plot()
+
+    def changed_xaxis(self, xlabel):
+        self.pm.label_xaxis = xlabel
+        self.update_plot()
+
+    def changed_yaxis(self, ylabel):
+        self.pm.label_yaxis = ylabel
+        self.update_plot()
+
     def construct_axis2_options(self):
         widget_yaxis2_vis = QWidget()
         layout_yaxis2_vis = QHBoxLayout(widget_yaxis2_vis)
@@ -217,6 +301,10 @@ class PlotTab(QWidget):
         self.stack_yaxis2.addWidget(widget_yaxis2_vis)
         self.stack_yaxis2.setCurrentIndex(0)
         self.layout_options.addWidget(self.stack_yaxis2)
+
+    def changed_yaxis2(self, ylabel2):
+        self.pm.label_yaxis2 = ylabel2
+        self.update_plot()
 
     def construct_axes_setting(self):
         layout_plot_setting = QVBoxLayout()
@@ -250,6 +338,29 @@ class PlotTab(QWidget):
         layout_radio_2axes.addWidget(self.checkbox_yaxis2_logscale)
         layout_plot_setting.addLayout(layout_radio_2axes)
         self.layout_options.addLayout(layout_plot_setting)
+
+    def on_toggle_grid(self, state):
+        self.pm.has_grid = state
+        self.update_plot()
+
+    def on_toggle_xaxis(self, state):
+        self.pm.is_xlog = state
+        self.update_plot()
+
+    def on_toggle_yaxis(self, state):
+        self.pm.is_y1log = state
+        self.update_plot()
+
+    def on_toggle_yaxis2(self, state):
+        self.pm.is_y2log = state
+        self.update_plot()
+
+    def on_radio_clicked_2axes(self):
+        if self.radio_axis1.isChecked():
+            self.pm.plots[self.selected].yaxis = 0
+        elif self.radio_axis2.isChecked():
+            self.pm.plots[self.selected].yaxis = 1
+        self.update_plot()
 
     def construct_marker_and_style(self):
         self.construct_style()
@@ -311,6 +422,32 @@ class PlotTab(QWidget):
         layout_marker2.addWidget(self.spinbox_marker_size)
         self.layout_options.addLayout(layout_marker2)
 
+    def on_changed_marker_style(self, style):
+        self.pm.plots[self.selected].marker_style = style
+        self.update_plot()
+
+    def on_changed_marker_color(self, color):
+        self.pm.plots[self.selected].marker_color = color
+        self.update_plot()
+
+    def on_slider_marker_size_changed(self, val):
+        self.marker_size2 = val
+        self.marker_size = val / 10
+        self.spinbox_marker_size.blockSignals(True)
+        self.spinbox_marker_size.setValue(self.marker_size)
+        self.spinbox_marker_size.blockSignals(False)
+        self.pm.plots[self.selected].marker_size = self.marker_size
+        self.update_plot()
+
+    def on_spinbox_marker_size_changed(self, val):
+        self.marker_size = val
+        self.marker_size2 = val * 10
+        self.slider_marker_size.blockSignals(True)
+        self.slider_marker_size.setValue(self.marker_size2)
+        self.slider_marker_size.blockSignals(False)
+        self.pm.plots[self.selected].marker_size = self.marker_size
+        self.update_plot()
+
     def construct_style(self):
         label_line = QLabel('Line')
         label_line.setStyleSheet('font-size: 18px;')
@@ -371,143 +508,6 @@ class PlotTab(QWidget):
             self.on_spinbox_line_width_changed)
         layout_line2.addWidget(self.spinbox_line_width)
         self.layout_options.addLayout(layout_line2)
-
-    def update_view_plots(self):
-        self.list_plots.setStringList(self.pm.plot_names)
-        self.view_plots.setModel(self.list_plots)
-        self.update_plot()
-
-    def on_view_plots_selected(self, current):
-        self.selected = current.row()
-        self.set_current_values(self.pm.plots[self.selected])
-
-    def set_current_values(self, plot):
-        if self.pm.has_twin_axes:
-            if plot.yaxis == 0:
-                self.radio_axis1.setChecked(True)
-                self.radio_axis2.setChecked(False)
-            else:
-                self.radio_axis1.setChecked(False)
-                self.radio_axis2.setChecked(True)
-        idx = self.combobox_marker_style.findText(plot.marker_style)
-        if idx >= 0:
-            self.combobox_marker_style.setCurrentIndex(idx)
-        idx = self.combobox_marker_color.findText(plot.marker_color)
-        if idx >= 0:
-            self.combobox_marker_color.setCurrentIndex(idx)
-        self.slider_marker_size.setValue(plot.marker_size * 10)
-        self.spinbox_marker_size.setValue(plot.marker_size)
-        idx = self.combobox_line_style.findText(plot.line_style)
-        if idx >= 0:
-            self.combobox_line_style.setCurrentIndex(idx)
-        idx = self.combobox_line_color.findText(plot.line_color)
-        if idx >= 0:
-            self.combobox_line_color.setCurrentIndex(idx)
-        self.slider_line_width.setValue(plot.line_width * 10)
-        self.spinbox_line_width.setValue(plot.line_width)
-
-    def on_button_add_clicked(self):
-        if not self.pm.add_plot():
-            return
-        self.update_view_plots()
-        # Select new plot
-        idx = self.list_plots.index(self.pm.nplots - 1, 0)
-        self.view_plots.selectionModel().setCurrentIndex(
-            idx, QItemSelectionModel.ClearAndSelect)
-
-    def on_button_delete_clicked(self):
-        # Get current selected plot
-        idx = self.view_plots.selectionModel().currentIndex()
-        current_row = idx.row()
-        if not self.pm.delete_plot():
-            return
-        self.update_view_plots()
-        # Select current plot; if deleted select the last plot
-        if current_row >= self.pm.nplots:
-            current_row = self.pm.nplots - 1
-        idx = self.list_plots.index(current_row, 0)
-        self.view_plots.selectionModel().setCurrentIndex(
-            idx, QItemSelectionModel.ClearAndSelect)
-
-    def on_update_plots_list(self, first):
-        idx = first.row()
-        new_plot_name = self.list_plots.data(first)
-        self.pm.plot_names[idx] = new_plot_name
-        self.update_view_plots()
-
-    def changed_title(self, title):
-        self.pm.title = title
-        self.update_plot()
-
-    def changed_xaxis(self, xlabel):
-        self.pm.label_xaxis = xlabel
-        self.update_plot()
-
-    def changed_yaxis(self, ylabel):
-        self.pm.label_yaxis = ylabel
-        self.update_plot()
-
-    def changed_yaxis2(self, ylabel2):
-        self.pm.label_yaxis2 = ylabel2
-        self.update_plot()
-
-    def on_toggle_grid(self, state):
-        self.pm.has_grid = state
-        self.update_plot()
-
-    def on_toggle_xaxis(self, state):
-        self.pm.is_xlog = state
-        self.update_plot()
-
-    def on_toggle_yaxis(self, state):
-        self.pm.is_y1log = state
-        self.update_plot()
-
-    def on_toggle_yaxis2(self, state):
-        self.pm.is_y2log = state
-        self.update_plot()
-
-    def on_toggle_2axes(self, state):
-        self.pm.has_twin_axes = state
-        self.stack_radio_axis1.setCurrentIndex(1 if state else 0)
-        self.stack_radio_axis2.setCurrentIndex(1 if state else 0)
-        self.stack_yaxis2.setCurrentIndex(1 if state else 0)
-        self.radio_axis1.setChecked(True)
-        self.checkbox_yaxis2_logscale.setVisible(state)
-        self.checkbox_yaxis2_logscale.setChecked(False)
-
-    def on_radio_clicked_2axes(self):
-        if self.radio_axis1.isChecked():
-            self.pm.plots[self.selected].yaxis = 0
-        elif self.radio_axis2.isChecked():
-            self.pm.plots[self.selected].yaxis = 1
-        self.update_plot()
-
-    def on_changed_marker_style(self, style):
-        self.pm.plots[self.selected].marker_style = style
-        self.update_plot()
-
-    def on_changed_marker_color(self, color):
-        self.pm.plots[self.selected].marker_color = color
-        self.update_plot()
-
-    def on_slider_marker_size_changed(self, val):
-        self.marker_size2 = val
-        self.marker_size = val / 10
-        self.spinbox_marker_size.blockSignals(True)
-        self.spinbox_marker_size.setValue(self.marker_size)
-        self.spinbox_marker_size.blockSignals(False)
-        self.pm.plots[self.selected].marker_size = self.marker_size
-        self.update_plot()
-
-    def on_spinbox_marker_size_changed(self, val):
-        self.marker_size = val
-        self.marker_size2 = val * 10
-        self.slider_marker_size.blockSignals(True)
-        self.slider_marker_size.setValue(self.marker_size2)
-        self.slider_marker_size.blockSignals(False)
-        self.pm.plots[self.selected].marker_size = self.marker_size
-        self.update_plot()
 
     def on_changed_line_style(self, style):
         self.pm.plots[self.selected].line_style = style
