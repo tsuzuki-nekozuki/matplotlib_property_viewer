@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
-from core.mpl_properties import get_color_list, get_marker_list, get_line_list
-from core.plot_class import PlotManager
-from core.plot_generator import CodeGenerator
-from ui.aspect_ratio import AspectRatioWidget
+from common.aspect_ratio import AspectRatioWidget
+from common.mpl_properties import get_color_list, get_marker_list, get_line_list
+from plot1d.plot_class import PlotManager
+from plot1d.plot_generator import CodeGenerator
 
 
 class PlotTab(QWidget):

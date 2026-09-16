@@ -9,12 +9,12 @@ from PySide6.QtWidgets import (
     QApplication, QGroupBox, QGridLayout
 )
 
-from core.mpl_properties import (
+from common.mpl_properties import (
     get_fonts_list, get_color_list, get_font_style_list, get_font_weight_list
 )
-from core.fonts_class import FontsManager
-# from core.plot_generator import CodeGenerator
-from ui.aspect_ratio import AspectRatioWidget
+from common.aspect_ratio import AspectRatioWidget
+from fonts.fonts_class import FontsManager
+from fonts.fonts_generator import FontCodeGenerator
 
 
 class FontsTab(QWidget):
@@ -329,6 +329,10 @@ class FontsTab(QWidget):
             top=0.95,
             bottom=0.05,
         )
+
+        generator = FontCodeGenerator()
+        code = generator.generate(self.fontm.user_settings)
+        self.text_code.setPlainText(code)
         self.canvas.draw()
 
     def draw_font_section(self, ax, title, settings):

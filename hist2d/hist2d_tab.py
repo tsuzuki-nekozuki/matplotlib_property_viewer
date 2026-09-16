@@ -12,10 +12,10 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
-from core.hist2d_class import Hist2dManager
-from core.hist2d_generator import Hist2dCodeGenerator
-from core.mpl_properties import get_colormap_list
-from ui.aspect_ratio import AspectRatioWidget
+from common.aspect_ratio import AspectRatioWidget
+from common.mpl_properties import get_colormap_list
+from hist2d.hist2d_class import Hist2dManager
+from hist2d.hist2d_generator import Hist2dCodeGenerator
 
 
 def is_integer(s: str) -> bool:

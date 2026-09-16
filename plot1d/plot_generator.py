@@ -1,5 +1,5 @@
-from core.base_generator import BaseGenerator
-from core.plot_class import PlotManager, PlotSettings
+from common.base_generator import BaseGenerator
+from plot1d.plot_class import PlotManager, PlotSettings
 
 
 class CodeGenerator(BaseGenerator):

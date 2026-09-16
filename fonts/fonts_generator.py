@@ -1,7 +1,7 @@
 from typing import Callable
 
-from core.base_generator import BaseGenerator
-from core.fonts_class import FontsSettings
+from common.base_generator import BaseGenerator
+from fonts.fonts_class import FontsSettings
 
 
 class FontCodeGenerator(BaseGenerator):

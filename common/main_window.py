@@ -6,9 +6,9 @@ from PySide6.QtGui import QGuiApplication
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from ui.plot_tab import PlotTab
-from ui.hist2d_tab import Hist2dTab
-from ui.fonts_tab import FontsTab
+from plot1d.plot_tab import PlotTab
+from hist2d.hist2d_tab import Hist2dTab
+from fonts.fonts_tab import FontsTab
 
 
 class MplCanvas(FigureCanvas):
@@ -28,8 +28,8 @@ class MainWindow(QWidget):
         tabs.setTabPosition(QTabWidget.TabPosition.North)
         tabs.setMovable(True)
 
-        tabs.addTab(Hist2dTab(MplCanvas()), 'Hist2D')
         tabs.addTab(PlotTab(MplCanvas()), 'Plot')
+        tabs.addTab(Hist2dTab(MplCanvas()), 'Hist2D')
         tabs.addTab(FontsTab(MplCanvas()), 'Fonts')
 
         layout = QVBoxLayout()

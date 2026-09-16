@@ -1,5 +1,5 @@
-from core.base_generator import BaseGenerator
-from core.hist2d_class import Hist2dManager, Hist2dSettings
+from common.base_generator import BaseGenerator
+from hist2d.hist2d_class import Hist2dManager, Hist2dSettings
 
 
 class Hist2dCodeGenerator(BaseGenerator):
