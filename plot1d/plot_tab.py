@@ -52,280 +52,23 @@ class PlotTab(QWidget):
         splitter.setStretchFactor(1, 0)
 
         # plots list
-        self.layout_plots_list = QVBoxLayout()
+        self.construct_plots_list()
 
-        self.label_plots_list = QLabel(
-            f'Plots list (max: {self.pm.max_nplots})')
-        self.label_plots_list.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_plots_list)
-
-        self.layout_plots_list = QHBoxLayout()
-        self.list_plots = QStringListModel()
-        self.list_plots.setStringList(self.pm.plot_names)
-        self.list_plots.dataChanged.connect(self.on_update_plots_list)
-        self.view_plots = QListView()
-        self.view_plots.setFlow(QListView.Flow.TopToBottom)
-        self.view_plots.setWrapping(True)
-        self.view_plots.setResizeMode(QListView.ResizeMode.Adjust)
-        self.view_plots.setModel(self.list_plots)
-        idx = self.list_plots.index(0, 0)
-        self.view_plots.selectionModel().setCurrentIndex(
-            idx, QItemSelectionModel.ClearAndSelect)
-        self.view_plots.setFixedSize(240, 120)
-        self.view_plots.selectionModel().currentChanged.connect(
-            self.on_view_plots_selected)
-        self.layout_plots_list.addWidget(self.view_plots)
-
-        self.layout_plots_buttons = QVBoxLayout()
-        self.button_add = QPushButton('Add')
-        self.button_add.setFixedWidth(80)
-        self.button_add.clicked.connect(self.on_button_add_clicked)
-        self.layout_plots_buttons.addWidget(self.button_add)
-        self.button_delete = QPushButton('Delete')
-        self.button_delete.setFixedWidth(80)
-        self.button_delete.clicked.connect(self.on_button_delete_clicked)
-        self.layout_plots_buttons.addWidget(self.button_delete)
-        self.checkbox_2axes = QCheckBox('2axes')
-        self.checkbox_2axes.stateChanged.connect(self.on_toggle_2axes)
-        self.layout_plots_buttons.addWidget(self.checkbox_2axes)
-
-        self.layout_plots_list.addLayout(self.layout_plots_buttons)
-        self.layout_options.addLayout(self.layout_plots_list)
         hline1 = QFrame()
         hline1.setFrameShape(QFrame.HLine)
         hline1.setFrameShadow(QFrame.Sunken)
         self.layout_options.addWidget(hline1)
 
         # title and axis
-        self.label_title_and_axis = QLabel('Title and Axis')
-        self.label_title_and_axis.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_title_and_axis)
-
-        self.layout_title = QHBoxLayout()
-        self.label_text_title = QLabel('Title')
-        self.label_text_title.setFixedWidth(50)
-        self.layout_title.addWidget(self.label_text_title)
-        self.text_title = QLineEdit()
-        self.text_title.setFixedWidth(240)
-        self.text_title.textChanged.connect(self.changed_title)
-        self.layout_title.addWidget(self.text_title)
-        self.layout_options.addLayout(self.layout_title)
-
-        self.layout_xaxis = QHBoxLayout()
-        self.label_text_xaxis = QLabel('x-axis')
-        self.label_text_xaxis.setFixedWidth(50)
-        self.layout_xaxis.addWidget(self.label_text_xaxis)
-        self.text_xaxis = QLineEdit()
-        self.text_xaxis.setFixedWidth(240)
-        self.text_xaxis.textChanged.connect(self.changed_xaxis)
-        self.layout_xaxis.addWidget(self.text_xaxis)
-        self.layout_options.addLayout(self.layout_xaxis)
-
-        self.layout_yaxis = QHBoxLayout()
-        self.label_text_yaxis = QLabel('y-axis')
-        self.label_text_yaxis.setFixedWidth(50)
-        self.layout_yaxis.addWidget(self.label_text_yaxis)
-        self.text_yaxis = QLineEdit()
-        self.text_yaxis.setFixedWidth(240)
-        self.text_yaxis.textChanged.connect(self.changed_yaxis)
-        self.layout_yaxis.addWidget(self.text_yaxis)
-        self.layout_options.addLayout(self.layout_yaxis)
-
-        self.stack_yaxis2 = QStackedWidget()
-        self.widget_yaxis2_vis = QWidget()
-        self.layout_yaxis2_vis = QHBoxLayout(self.widget_yaxis2_vis)
-        self.label_text_yaxis2 = QLabel('y2-axis')
-        self.label_text_yaxis2.setFixedWidth(50)
-        self.layout_yaxis2_vis.addWidget(self.label_text_yaxis2)
-        self.text_yaxis2 = QLineEdit()
-        self.text_yaxis2.setFixedWidth(240)
-        self.text_yaxis2.textChanged.connect(self.changed_yaxis2)
-        self.layout_yaxis2_vis.addWidget(self.text_yaxis2)
-        self.widget_yaxis2_inv = QWidget()
-        self.layout_yaxis2_inv = QHBoxLayout(self.widget_yaxis2_inv)
-        self.empty3 = QWidget()
-        self.empty3.setFixedWidth(50)
-        self.layout_yaxis2_inv.addWidget(self.empty3)
-        self.empty4 = QWidget()
-        self.empty4.setFixedWidth(240)
-        self.layout_yaxis2_inv.addWidget(self.empty4)
-        self.stack_yaxis2.addWidget(self.widget_yaxis2_inv)
-        self.stack_yaxis2.addWidget(self.widget_yaxis2_vis)
-        self.stack_yaxis2.setCurrentIndex(0)
-        self.layout_options.addWidget(self.stack_yaxis2)
-
-        self.layout_plot_setting = QVBoxLayout()
-        self.layout_grid_axes = QHBoxLayout()
-        self.checkbox_grid = QCheckBox('add grid')
-        self.checkbox_grid.stateChanged.connect(self.on_toggle_grid)
-        self.layout_grid_axes.addWidget(self.checkbox_grid)
-        self.checkbox_xaxis_logscale = QCheckBox('x-axis log scale')
-        self.checkbox_xaxis_logscale.stateChanged.connect(self.on_toggle_xaxis)
-        self.layout_grid_axes.addWidget(self.checkbox_xaxis_logscale)
-        self.checkbox_yaxis_logscale = QCheckBox('y-axis1 log scale')
-        self.checkbox_yaxis_logscale.stateChanged.connect(self.on_toggle_yaxis)
-        self.layout_grid_axes.addWidget(self.checkbox_yaxis_logscale)
-        self.layout_plot_setting.addLayout(self.layout_grid_axes)
-
-        self.layout_radio_2axes = QHBoxLayout()
-        self.radio_group_axis = QButtonGroup()
-        self.stack_radio_axis1 = QStackedWidget()
-        self.empty1 = QWidget()
-        self.stack_radio_axis1.addWidget(self.empty1)
-        self.radio_axis1 = QRadioButton('axis1')
-        self.radio_group_axis.addButton(self.radio_axis1)
-        self.stack_radio_axis1.addWidget(self.radio_axis1)
-        self.layout_radio_2axes.addWidget(self.stack_radio_axis1)
-        self.stack_radio_axis2 = QStackedWidget()
-        self.empty2 = QWidget()
-        self.stack_radio_axis2.addWidget(self.empty2)
-        self.radio_axis2 = QRadioButton('axis2')
-        self.radio_group_axis.addButton(self.radio_axis2)
-        self.stack_radio_axis2.addWidget(self.radio_axis2)
-        self.layout_radio_2axes.addWidget(self.stack_radio_axis2)
-        self.radio_axis1.clicked.connect(self.on_radio_clicked_2axes)
-        self.radio_axis2.clicked.connect(self.on_radio_clicked_2axes)
-        self.radio_axis1.setVisible(False)
-        self.radio_axis2.setVisible(False)
-        self.checkbox_yaxis2_logscale = QCheckBox('y-axis2 log scale')
-        self.checkbox_yaxis2_logscale.setVisible(False)
-        self.checkbox_yaxis2_logscale.stateChanged.connect(
-            self.on_toggle_yaxis2)
-        self.layout_radio_2axes.addWidget(self.checkbox_yaxis2_logscale)
-        self.layout_plot_setting.addLayout(self.layout_radio_2axes)
-        self.layout_options.addLayout(self.layout_plot_setting)
+        self.construct_title_and_axis()
 
         hline2 = QFrame()
         hline2.setFrameShape(QFrame.HLine)
         hline2.setFrameShadow(QFrame.Sunken)
         self.layout_options.addWidget(hline2)
 
-        # marker
-        self.label_marker = QLabel('Marker')
-        self.label_marker.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_marker)
-
-        self.layout_marker1 = QHBoxLayout()
-
-        self.label_marker_style = QLabel('style')
-        self.layout_marker1.addWidget(self.label_marker_style)
-
-        self.combobox_marker_style = QComboBox()
-        marker_styles = get_marker_list()
-        self.combobox_marker_style.addItems(marker_styles)
-        self.combobox_marker_style.currentTextChanged.connect(
-            self.on_changed_marker_style)
-        self.layout_marker1.addWidget(self.combobox_marker_style)
-
-        self.label_marker_color = QLabel('color')
-        self.layout_marker1.addWidget(self.label_marker_color)
-
-        self.combobox_marker_color = QComboBox()
-        colors = get_color_list()
-        self.combobox_marker_color.addItems(colors)
-        for i, icolor in enumerate(colors):
-            if icolor.startswith('- '):
-                self.combobox_marker_color.model().item(i).setEnabled(False)
-        index = self.combobox_marker_color.findText(
-            self.pm.plots[self.selected].marker_color)
-        if index >= 0:
-            self.combobox_marker_color.setCurrentIndex(index)
-        self.combobox_marker_color.currentTextChanged.connect(
-            self.on_changed_marker_color)
-        self.layout_marker1.addWidget(self.combobox_marker_color)
-
-        self.layout_marker2 = QHBoxLayout()
-        self.label_marker_size = QLabel('size')
-        self.layout_marker2.addWidget(self.label_marker_size)
-        self.layout_options.addLayout(self.layout_marker1)
-
-        self.marker_size = self.pm.plots[self.selected].marker_size
-        self.marker_size2 = self.marker_size * 10
-        self.slider_marker_size = QSlider(Qt.Orientation.Horizontal)
-        self.slider_marker_size.setFixedWidth(210)
-        self.slider_marker_size.setMinimum(1)
-        self.slider_marker_size.setMaximum(150)
-        self.slider_marker_size.setValue(self.marker_size2)
-        self.slider_marker_size.valueChanged.connect(
-            self.on_slider_marker_size_changed)
-        self.layout_marker2.addWidget(self.slider_marker_size)
-
-        self.spinbox_marker_size = QDoubleSpinBox()
-        self.spinbox_marker_size.setFixedWidth(60)
-        self.spinbox_marker_size.setMinimum(0.1)
-        self.spinbox_marker_size.setMaximum(15)
-        self.spinbox_marker_size.setDecimals(1)
-        self.spinbox_marker_size.setSingleStep(0.1)
-        self.spinbox_marker_size.setValue(self.marker_size)
-        self.spinbox_marker_size.valueChanged.connect(
-            self.on_spinbox_marker_size_changed)
-        self.layout_marker2.addWidget(self.spinbox_marker_size)
-        self.layout_options.addLayout(self.layout_marker2)
-
-        # line
-        self.label_line = QLabel('Line')
-        self.label_line.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_line)
-
-        self.layout_line1 = QHBoxLayout()
-
-        self.label_line_style = QLabel('style')
-        self.layout_line1.addWidget(self.label_line_style)
-
-        self.combobox_line_style = QComboBox()
-        styles = get_line_list()
-        self.combobox_line_style.addItems(styles)
-        index = self.combobox_line_style.findText(
-            self.pm.plots[self.selected].line_style)
-        if index >= 0:
-            self.combobox_line_style.setCurrentIndex(index)
-        self.combobox_line_style.currentTextChanged.connect(
-            self.on_changed_line_style)
-        self.layout_line1.addWidget(self.combobox_line_style)
-
-        self.label_line_color = QLabel('color')
-        self.layout_line1.addWidget(self.label_line_color)
-
-        self.combobox_line_color = QComboBox()
-        self.combobox_line_color.addItems(colors)
-        for i, icolor in enumerate(colors):
-            if icolor.startswith('- '):
-                self.combobox_line_color.model().item(i).setEnabled(False)
-        index = self.combobox_line_color.findText(
-            self.pm.plots[self.selected].line_color)
-        if index >= 0:
-            self.combobox_line_color.setCurrentIndex(index)
-        self.combobox_line_color.currentTextChanged.connect(
-            self.on_changed_line_color)
-        self.layout_line1.addWidget(self.combobox_line_color)
-        self.layout_options.addLayout(self.layout_line1)
-
-        self.layout_line2 = QHBoxLayout()
-        self.label_line_width = QLabel('width')
-        self.layout_line2.addWidget(self.label_line_width)
-
-        self.line_width = self.pm.plots[self.selected].line_width
-        self.line_width2 = self.line_width * 10
-        self.slider_line_width = QSlider(Qt.Orientation.Horizontal)
-        self.slider_line_width.setFixedWidth(210)
-        self.slider_line_width.setMinimum(1)
-        self.slider_line_width.setMaximum(50)
-        self.slider_line_width.setValue(self.line_width2)
-        self.slider_line_width.valueChanged.connect(
-            self.on_slider_line_width_changed)
-        self.layout_line2.addWidget(self.slider_line_width)
-
-        self.spinbox_line_width = QDoubleSpinBox()
-        self.spinbox_line_width.setFixedWidth(60)
-        self.spinbox_line_width.setMinimum(0.1)
-        self.spinbox_line_width.setMaximum(5)
-        self.spinbox_line_width.setDecimals(1)
-        self.spinbox_line_width.setSingleStep(0.1)
-        self.spinbox_line_width.setValue(self.line_width)
-        self.spinbox_line_width.valueChanged.connect(
-            self.on_spinbox_line_width_changed)
-        self.layout_line2.addWidget(self.spinbox_line_width)
-        self.layout_options.addLayout(self.layout_line2)
+        # marker and style
+        self.construct_marker_and_style()
 
         hline3 = QFrame()
         hline3.setFrameShape(QFrame.HLine)
@@ -352,6 +95,282 @@ class PlotTab(QWidget):
 
         # initial plot
         self.update_plot()
+
+    def construct_plots_list(self):
+        label_plots_list = QLabel(f'Plots list (max: {self.pm.max_nplots})')
+        label_plots_list.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_plots_list)
+
+        layout_plots_list = QHBoxLayout()
+        self.list_plots = QStringListModel()
+        self.list_plots.setStringList(self.pm.plot_names)
+        self.list_plots.dataChanged.connect(self.on_update_plots_list)
+        self.view_plots = QListView()
+        self.view_plots.setFlow(QListView.Flow.TopToBottom)
+        self.view_plots.setWrapping(True)
+        self.view_plots.setResizeMode(QListView.ResizeMode.Adjust)
+        self.view_plots.setModel(self.list_plots)
+        idx = self.list_plots.index(0, 0)
+        self.view_plots.selectionModel().setCurrentIndex(
+            idx, QItemSelectionModel.ClearAndSelect)
+        self.view_plots.setFixedSize(240, 120)
+        self.view_plots.selectionModel().currentChanged.connect(
+            self.on_view_plots_selected)
+        layout_plots_list.addWidget(self.view_plots)
+
+        self.layout_plots_buttons = QVBoxLayout()
+        self.button_add = QPushButton('Add')
+        self.button_add.setFixedWidth(80)
+        self.button_add.clicked.connect(self.on_button_add_clicked)
+        self.layout_plots_buttons.addWidget(self.button_add)
+        self.button_delete = QPushButton('Delete')
+        self.button_delete.setFixedWidth(80)
+        self.button_delete.clicked.connect(self.on_button_delete_clicked)
+        self.layout_plots_buttons.addWidget(self.button_delete)
+        self.checkbox_2axes = QCheckBox('2axes')
+        self.checkbox_2axes.stateChanged.connect(self.on_toggle_2axes)
+        self.layout_plots_buttons.addWidget(self.checkbox_2axes)
+
+        layout_plots_list.addLayout(self.layout_plots_buttons)
+        self.layout_options.addLayout(layout_plots_list)
+
+    def construct_title_and_axis(self):
+        label_title_and_axis = QLabel('Title and Axis')
+        label_title_and_axis.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_title_and_axis)
+
+        self.construct_title_axis_name()
+        self.construct_axis2_options()
+        self.construct_axes_setting()
+
+    def construct_title_axis_name(self):
+        layout_title = QHBoxLayout()
+        label_text_title = QLabel('Title')
+        label_text_title.setFixedWidth(50)
+        layout_title.addWidget(label_text_title)
+        self.text_title = QLineEdit()
+        self.text_title.setFixedWidth(240)
+        self.text_title.textChanged.connect(self.changed_title)
+        layout_title.addWidget(self.text_title)
+        self.layout_options.addLayout(layout_title)
+
+        layout_xaxis = QHBoxLayout()
+        label_text_xaxis = QLabel('x-axis')
+        label_text_xaxis.setFixedWidth(50)
+        layout_xaxis.addWidget(label_text_xaxis)
+        self.text_xaxis = QLineEdit()
+        self.text_xaxis.setFixedWidth(240)
+        self.text_xaxis.textChanged.connect(self.changed_xaxis)
+        layout_xaxis.addWidget(self.text_xaxis)
+        self.layout_options.addLayout(layout_xaxis)
+
+        layout_yaxis = QHBoxLayout()
+        label_text_yaxis = QLabel('y-axis')
+        label_text_yaxis.setFixedWidth(50)
+        layout_yaxis.addWidget(label_text_yaxis)
+        self.text_yaxis = QLineEdit()
+        self.text_yaxis.setFixedWidth(240)
+        self.text_yaxis.textChanged.connect(self.changed_yaxis)
+        layout_yaxis.addWidget(self.text_yaxis)
+        self.layout_options.addLayout(layout_yaxis)
+
+    def construct_axis2_options(self):
+        self.stack_yaxis2 = QStackedWidget()
+        widget_yaxis2_vis = QWidget()
+        layout_yaxis2_vis = QHBoxLayout(widget_yaxis2_vis)
+        label_text_yaxis2 = QLabel('y2-axis')
+        label_text_yaxis2.setFixedWidth(50)
+        layout_yaxis2_vis.addWidget(label_text_yaxis2)
+        self.text_yaxis2 = QLineEdit()
+        self.text_yaxis2.setFixedWidth(240)
+        self.text_yaxis2.textChanged.connect(self.changed_yaxis2)
+        layout_yaxis2_vis.addWidget(self.text_yaxis2)
+        widget_yaxis2_inv = QWidget()
+        layout_yaxis2_inv = QHBoxLayout(widget_yaxis2_inv)
+        empty3 = QWidget()
+        empty3.setFixedWidth(50)
+        layout_yaxis2_inv.addWidget(empty3)
+        empty4 = QWidget()
+        empty4.setFixedWidth(240)
+        layout_yaxis2_inv.addWidget(empty4)
+        self.stack_yaxis2.addWidget(widget_yaxis2_inv)
+        self.stack_yaxis2.addWidget(widget_yaxis2_vis)
+        self.stack_yaxis2.setCurrentIndex(0)
+        self.layout_options.addWidget(self.stack_yaxis2)
+
+    def construct_axes_setting(self):
+        layout_plot_setting = QVBoxLayout()
+        layout_grid_axes = QHBoxLayout()
+        self.checkbox_grid = QCheckBox('add grid')
+        self.checkbox_grid.stateChanged.connect(self.on_toggle_grid)
+        layout_grid_axes.addWidget(self.checkbox_grid)
+        self.checkbox_xaxis_logscale = QCheckBox('x-axis log scale')
+        self.checkbox_xaxis_logscale.stateChanged.connect(self.on_toggle_xaxis)
+        layout_grid_axes.addWidget(self.checkbox_xaxis_logscale)
+        self.checkbox_yaxis_logscale = QCheckBox('y-axis1 log scale')
+        self.checkbox_yaxis_logscale.stateChanged.connect(self.on_toggle_yaxis)
+        layout_grid_axes.addWidget(self.checkbox_yaxis_logscale)
+        layout_plot_setting.addLayout(layout_grid_axes)
+
+        layout_radio_2axes = QHBoxLayout()
+        self.radio_group_axis = QButtonGroup()
+        self.stack_radio_axis1 = QStackedWidget()
+        empty1 = QWidget()
+        self.stack_radio_axis1.addWidget(empty1)
+        self.radio_axis1 = QRadioButton('axis1')
+        self.radio_group_axis.addButton(self.radio_axis1)
+        self.stack_radio_axis1.addWidget(self.radio_axis1)
+        layout_radio_2axes.addWidget(self.stack_radio_axis1)
+        self.stack_radio_axis2 = QStackedWidget()
+        empty2 = QWidget()
+        self.stack_radio_axis2.addWidget(empty2)
+        self.radio_axis2 = QRadioButton('axis2')
+        self.radio_group_axis.addButton(self.radio_axis2)
+        self.stack_radio_axis2.addWidget(self.radio_axis2)
+        layout_radio_2axes.addWidget(self.stack_radio_axis2)
+        self.radio_axis1.clicked.connect(self.on_radio_clicked_2axes)
+        self.radio_axis2.clicked.connect(self.on_radio_clicked_2axes)
+        self.radio_axis1.setVisible(False)
+        self.radio_axis2.setVisible(False)
+        self.checkbox_yaxis2_logscale = QCheckBox('y-axis2 log scale')
+        self.checkbox_yaxis2_logscale.setVisible(False)
+        self.checkbox_yaxis2_logscale.stateChanged.connect(
+            self.on_toggle_yaxis2)
+        layout_radio_2axes.addWidget(self.checkbox_yaxis2_logscale)
+        layout_plot_setting.addLayout(layout_radio_2axes)
+        self.layout_options.addLayout(layout_plot_setting)
+
+    def construct_marker_and_style(self):
+        self.construct_style()
+        self.construct_marker()
+
+    def construct_marker(self):
+        label_marker = QLabel('Marker')
+        label_marker.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_marker)
+
+        layout_marker1 = QHBoxLayout()
+
+        label_marker_style = QLabel('style')
+        layout_marker1.addWidget(label_marker_style)
+
+        self.combobox_marker_style = QComboBox()
+        marker_styles = get_marker_list()
+        self.combobox_marker_style.addItems(marker_styles)
+        self.combobox_marker_style.currentTextChanged.connect(
+            self.on_changed_marker_style)
+        layout_marker1.addWidget(self.combobox_marker_style)
+
+        label_marker_color = QLabel('color')
+        layout_marker1.addWidget(label_marker_color)
+
+        self.combobox_marker_color = QComboBox()
+        colors = get_color_list()
+        self.combobox_marker_color.addItems(colors)
+        for i, icolor in enumerate(colors):
+            if icolor.startswith('- '):
+                self.combobox_marker_color.model().item(i).setEnabled(False)
+        index = self.combobox_marker_color.findText(
+            self.pm.plots[self.selected].marker_color)
+        if index >= 0:
+            self.combobox_marker_color.setCurrentIndex(index)
+        self.combobox_marker_color.currentTextChanged.connect(
+            self.on_changed_marker_color)
+        layout_marker1.addWidget(self.combobox_marker_color)
+
+        layout_marker2 = QHBoxLayout()
+        label_marker_size = QLabel('size')
+        layout_marker2.addWidget(label_marker_size)
+        self.layout_options.addLayout(layout_marker1)
+
+        self.marker_size = self.pm.plots[self.selected].marker_size
+        self.marker_size2 = self.marker_size * 10
+        self.slider_marker_size = QSlider(Qt.Orientation.Horizontal)
+        self.slider_marker_size.setFixedWidth(210)
+        self.slider_marker_size.setMinimum(1)
+        self.slider_marker_size.setMaximum(150)
+        self.slider_marker_size.setValue(self.marker_size2)
+        self.slider_marker_size.valueChanged.connect(
+            self.on_slider_marker_size_changed)
+        layout_marker2.addWidget(self.slider_marker_size)
+
+        self.spinbox_marker_size = QDoubleSpinBox()
+        self.spinbox_marker_size.setFixedWidth(60)
+        self.spinbox_marker_size.setMinimum(0.1)
+        self.spinbox_marker_size.setMaximum(15)
+        self.spinbox_marker_size.setDecimals(1)
+        self.spinbox_marker_size.setSingleStep(0.1)
+        self.spinbox_marker_size.setValue(self.marker_size)
+        self.spinbox_marker_size.valueChanged.connect(
+            self.on_spinbox_marker_size_changed)
+        layout_marker2.addWidget(self.spinbox_marker_size)
+        self.layout_options.addLayout(layout_marker2)
+
+    def construct_style(self):
+        label_line = QLabel('Line')
+        label_line.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_line)
+
+        layout_line1 = QHBoxLayout()
+
+        label_line_style = QLabel('style')
+        layout_line1.addWidget(label_line_style)
+
+        self.combobox_line_style = QComboBox()
+        styles = get_line_list()
+        self.combobox_line_style.addItems(styles)
+        index = self.combobox_line_style.findText(
+            self.pm.plots[self.selected].line_style)
+        if index >= 0:
+            self.combobox_line_style.setCurrentIndex(index)
+        self.combobox_line_style.currentTextChanged.connect(
+            self.on_changed_line_style)
+        layout_line1.addWidget(self.combobox_line_style)
+
+        label_line_color = QLabel('color')
+        layout_line1.addWidget(label_line_color)
+
+        self.combobox_line_color = QComboBox()
+        colors = get_color_list()
+        self.combobox_line_color.addItems(colors)
+        for i, icolor in enumerate(colors):
+            if icolor.startswith('- '):
+                self.combobox_line_color.model().item(i).setEnabled(False)
+        index = self.combobox_line_color.findText(
+            self.pm.plots[self.selected].line_color)
+        if index >= 0:
+            self.combobox_line_color.setCurrentIndex(index)
+        self.combobox_line_color.currentTextChanged.connect(
+            self.on_changed_line_color)
+        layout_line1.addWidget(self.combobox_line_color)
+        self.layout_options.addLayout(layout_line1)
+
+        layout_line2 = QHBoxLayout()
+        label_line_width = QLabel('width')
+        layout_line2.addWidget(label_line_width)
+
+        self.line_width = self.pm.plots[self.selected].line_width
+        self.line_width2 = self.line_width * 10
+        self.slider_line_width = QSlider(Qt.Orientation.Horizontal)
+        self.slider_line_width.setFixedWidth(210)
+        self.slider_line_width.setMinimum(1)
+        self.slider_line_width.setMaximum(50)
+        self.slider_line_width.setValue(self.line_width2)
+        self.slider_line_width.valueChanged.connect(
+            self.on_slider_line_width_changed)
+        layout_line2.addWidget(self.slider_line_width)
+
+        self.spinbox_line_width = QDoubleSpinBox()
+        self.spinbox_line_width.setFixedWidth(60)
+        self.spinbox_line_width.setMinimum(0.1)
+        self.spinbox_line_width.setMaximum(5)
+        self.spinbox_line_width.setDecimals(1)
+        self.spinbox_line_width.setSingleStep(0.1)
+        self.spinbox_line_width.setValue(self.line_width)
+        self.spinbox_line_width.valueChanged.connect(
+            self.on_spinbox_line_width_changed)
+        layout_line2.addWidget(self.spinbox_line_width)
+        self.layout_options.addLayout(layout_line2)
 
     def update_view_plots(self):
         self.list_plots.setStringList(self.pm.plot_names)
