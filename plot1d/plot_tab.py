@@ -1,6 +1,4 @@
-import sys
 import matplotlib.pyplot as plt
-import numpy as np
 
 from PySide6.QtCore import Qt, QStringListModel, QItemSelectionModel
 from PySide6.QtWidgets import (
@@ -11,9 +9,10 @@ from PySide6.QtWidgets import (
 )
 
 from common.aspect_ratio import AspectRatioWidget
-from common.mpl_properties import get_color_list, get_marker_list, get_line_list
-from plot1d.plot_class import PlotManager
-from plot1d.plot_generator import CodeGenerator
+from common.mpl_properties import (
+    get_color_list, get_marker_list, get_line_list
+)
+from plot1d.plot_manager import PlotManager
 
 
 class PlotTab(QWidget):
@@ -63,8 +62,8 @@ class PlotTab(QWidget):
         self.text_title = QLineEdit()
         self.text_xaxis = QLineEdit()
         self.text_yaxis = QLineEdit()
-        self.stack_yaxis2 = QStackedWidget()
         self.text_yaxis2 = QLineEdit()
+        self.stack_yaxis2 = QStackedWidget()
         self.checkbox_grid = QCheckBox('add grid')
         self.checkbox_xaxis_logscale = QCheckBox('x-axis log scale')
         self.checkbox_yaxis_logscale = QCheckBox('y-axis1 log scale')
@@ -82,15 +81,16 @@ class PlotTab(QWidget):
         self.layout_options.addWidget(hline2)
 
         # marker and style
+        self.marker_size = self.pm.default_marker_size
+        self.marker_size2 = self.marker_size * 10
+        self.line_width = self.pm.default_line_width
+        self.line_width2 = self.line_width * 10
         self.combobox_marker_style = QComboBox()
         self.combobox_marker_color = QComboBox()
-        self.marker_size = self.pm.plots[self.selected].marker_size
-        self.marker_size2 = self.marker_size * 10
         self.slider_marker_size = QSlider(Qt.Orientation.Horizontal)
         self.spinbox_marker_size = QDoubleSpinBox()
-        self.line_width = self.pm.plots[self.selected].line_width
-        self.line_width2 = self.line_width * 10
         self.slider_line_width = QSlider(Qt.Orientation.Horizontal)
+        self.spinbox_line_width = QDoubleSpinBox()
         self.combobox_line_style = QComboBox()
         self.combobox_line_color = QComboBox()
         self.construct_marker_and_style()
@@ -101,9 +101,9 @@ class PlotTab(QWidget):
         self.layout_options.addWidget(hline3)
 
         # code
-        self.label_code = QLabel('Codes')
-        self.label_code.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_code)
+        label_code = QLabel('Codes')
+        label_code.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_code)
         self.text_code = QPlainTextEdit()
         self.text_code.setFixedWidth(340)
         self.text_code.setPlainText('This is a text.')
@@ -166,38 +166,45 @@ class PlotTab(QWidget):
 
     def on_update_plots_list(self, first):
         idx = first.row()
-        new_plot_name = self.list_plots.data(first)
-        self.pm.plot_names[idx] = new_plot_name
+        self.pm.update_plot_setting(idx, 'name', self.list_plots.data(first))
         self.update_view_plots()
 
     def on_view_plots_selected(self, current):
         self.selected = current.row()
-        self.set_current_values(self.pm.plots[self.selected])
+        self.set_current_values(self.selected)
 
-    def set_current_values(self, plot):
-        if self.pm.has_twin_axes:
-            if plot.yaxis == 0:
+    def set_current_values(self, pid: int):
+        if self.pm.get_twin_axes_state():
+            if self.pm.get_plot_setting(pid, 'y2') == 0:
                 self.radio_axis1.setChecked(True)
                 self.radio_axis2.setChecked(False)
             else:
                 self.radio_axis1.setChecked(False)
                 self.radio_axis2.setChecked(True)
-        idx = self.combobox_marker_style.findText(plot.marker_style)
+        idx = self.combobox_marker_style.findText(
+            self.pm.get_plot_setting(pid, 'marker_style'))
         if idx >= 0:
             self.combobox_marker_style.setCurrentIndex(idx)
-        idx = self.combobox_marker_color.findText(plot.marker_color)
+        idx = self.combobox_marker_color.findText(
+            self.pm.get_plot_setting(pid, 'marker_color'))
         if idx >= 0:
             self.combobox_marker_color.setCurrentIndex(idx)
-        self.slider_marker_size.setValue(plot.marker_size * 10)
-        self.spinbox_marker_size.setValue(plot.marker_size)
-        idx = self.combobox_line_style.findText(plot.line_style)
+        self.slider_marker_size.setValue(
+            self.pm.get_plot_setting(pid, 'marker_size') * 10)
+        self.spinbox_marker_size.setValue(
+            self.pm.get_plot_setting(pid, 'marker_size'))
+        idx = self.combobox_line_style.findText(
+            self.pm.get_plot_setting(pid, 'line_style'))
         if idx >= 0:
             self.combobox_line_style.setCurrentIndex(idx)
-        idx = self.combobox_line_color.findText(plot.line_color)
+        idx = self.combobox_line_color.findText(
+            self.pm.get_plot_setting(pid, 'line_color'))
         if idx >= 0:
             self.combobox_line_color.setCurrentIndex(idx)
-        self.slider_line_width.setValue(plot.line_width * 10)
-        self.spinbox_line_width.setValue(plot.line_width)
+        self.slider_line_width.setValue(
+            self.pm.get_plot_setting(pid, 'line_width') * 10)
+        self.spinbox_line_width.setValue(
+            self.pm.get_plot_setting(pid, 'line_width'))
 
     def on_button_add_clicked(self):
         if not self.pm.add_plot():
@@ -223,7 +230,7 @@ class PlotTab(QWidget):
             idx, QItemSelectionModel.ClearAndSelect)
 
     def on_toggle_2axes(self, state):
-        self.pm.has_twin_axes = state
+        self.pm.enable_twinx(state)
         self.stack_radio_axis1.setCurrentIndex(1 if state else 0)
         self.stack_radio_axis2.setCurrentIndex(1 if state else 0)
         self.stack_yaxis2.setCurrentIndex(1 if state else 0)
@@ -269,15 +276,15 @@ class PlotTab(QWidget):
         self.layout_options.addLayout(layout_yaxis)
 
     def changed_title(self, title):
-        self.pm.title = title
+        self.pm.set_title_settings('title', title)
         self.update_plot()
 
     def changed_xaxis(self, xlabel):
-        self.pm.label_xaxis = xlabel
+        self.pm.set_title_settings('x', xlabel)
         self.update_plot()
 
     def changed_yaxis(self, ylabel):
-        self.pm.label_yaxis = ylabel
+        self.pm.set_title_settings('y', ylabel)
         self.update_plot()
 
     def construct_axis2_options(self):
@@ -303,7 +310,7 @@ class PlotTab(QWidget):
         self.layout_options.addWidget(self.stack_yaxis2)
 
     def changed_yaxis2(self, ylabel2):
-        self.pm.label_yaxis2 = ylabel2
+        self.pm.set_title_settings('y2', ylabel2)
         self.update_plot()
 
     def construct_axes_setting(self):
@@ -340,26 +347,26 @@ class PlotTab(QWidget):
         self.layout_options.addLayout(layout_plot_setting)
 
     def on_toggle_grid(self, state):
-        self.pm.has_grid = state
+        self.pm.enable_grid(state)
         self.update_plot()
 
     def on_toggle_xaxis(self, state):
-        self.pm.is_xlog = state
+        self.pm.enable_logscale('x', state)
         self.update_plot()
 
     def on_toggle_yaxis(self, state):
-        self.pm.is_y1log = state
+        self.pm.enable_logscale('y', state)
         self.update_plot()
 
     def on_toggle_yaxis2(self, state):
-        self.pm.is_y2log = state
+        self.pm.enable_logscale('y2', state)
         self.update_plot()
 
     def on_radio_clicked_2axes(self):
         if self.radio_axis1.isChecked():
-            self.pm.plots[self.selected].yaxis = 0
+            self.pm.update_plot_setting(self.selected, 'y2', 0)
         elif self.radio_axis2.isChecked():
-            self.pm.plots[self.selected].yaxis = 1
+            self.pm.update_plot_setting(self.selected, 'y2', 1)
         self.update_plot()
 
     def construct_marker_and_style(self):
@@ -391,7 +398,7 @@ class PlotTab(QWidget):
             if icolor.startswith('- '):
                 self.combobox_marker_color.model().item(i).setEnabled(False)
         index = self.combobox_marker_color.findText(
-            self.pm.plots[self.selected].marker_color)
+            self.pm.default_colors[self.selected])
         if index >= 0:
             self.combobox_marker_color.setCurrentIndex(index)
         self.combobox_marker_color.currentTextChanged.connect(
@@ -423,11 +430,11 @@ class PlotTab(QWidget):
         self.layout_options.addLayout(layout_marker2)
 
     def on_changed_marker_style(self, style):
-        self.pm.plots[self.selected].marker_style = style
+        self.pm.update_plot_setting(self.selected, 'marker_style', style)
         self.update_plot()
 
     def on_changed_marker_color(self, color):
-        self.pm.plots[self.selected].marker_color = color
+        self.pm.update_plot_setting(self.selected, 'marker_color', color)
         self.update_plot()
 
     def on_slider_marker_size_changed(self, val):
@@ -436,7 +443,8 @@ class PlotTab(QWidget):
         self.spinbox_marker_size.blockSignals(True)
         self.spinbox_marker_size.setValue(self.marker_size)
         self.spinbox_marker_size.blockSignals(False)
-        self.pm.plots[self.selected].marker_size = self.marker_size
+        self.pm.update_plot_setting(
+            self.selected, 'marker_size', self.marker_size)
         self.update_plot()
 
     def on_spinbox_marker_size_changed(self, val):
@@ -445,7 +453,8 @@ class PlotTab(QWidget):
         self.slider_marker_size.blockSignals(True)
         self.slider_marker_size.setValue(self.marker_size2)
         self.slider_marker_size.blockSignals(False)
-        self.pm.plots[self.selected].marker_size = self.marker_size
+        self.pm.update_plot_setting(
+            self.selected, 'marker_size', self.marker_size)
         self.update_plot()
 
     def construct_style(self):
@@ -460,8 +469,7 @@ class PlotTab(QWidget):
 
         styles = get_line_list()
         self.combobox_line_style.addItems(styles)
-        index = self.combobox_line_style.findText(
-            self.pm.plots[self.selected].line_style)
+        index = self.combobox_line_style.findText(self.pm.default_line_style)
         if index >= 0:
             self.combobox_line_style.setCurrentIndex(index)
         self.combobox_line_style.currentTextChanged.connect(
@@ -477,7 +485,7 @@ class PlotTab(QWidget):
             if icolor.startswith('- '):
                 self.combobox_line_color.model().item(i).setEnabled(False)
         index = self.combobox_line_color.findText(
-            self.pm.plots[self.selected].line_color)
+            self.pm.default_colors[self.selected])
         if index >= 0:
             self.combobox_line_color.setCurrentIndex(index)
         self.combobox_line_color.currentTextChanged.connect(
@@ -497,7 +505,6 @@ class PlotTab(QWidget):
             self.on_slider_line_width_changed)
         layout_line2.addWidget(self.slider_line_width)
 
-        self.spinbox_line_width = QDoubleSpinBox()
         self.spinbox_line_width.setFixedWidth(60)
         self.spinbox_line_width.setMinimum(0.1)
         self.spinbox_line_width.setMaximum(5)
@@ -510,11 +517,11 @@ class PlotTab(QWidget):
         self.layout_options.addLayout(layout_line2)
 
     def on_changed_line_style(self, style):
-        self.pm.plots[self.selected].line_style = style
+        self.pm.update_plot_setting(self.selected, 'line_style', style)
         self.update_plot()
 
     def on_changed_line_color(self, color):
-        self.pm.plots[self.selected].line_color = color
+        self.pm.update_plot_setting(self.selected, 'line_color', color)
         self.update_plot()
 
     def on_slider_line_width_changed(self, val):
@@ -523,7 +530,8 @@ class PlotTab(QWidget):
         self.spinbox_line_width.blockSignals(True)
         self.spinbox_line_width.setValue(self.line_width)
         self.spinbox_line_width.blockSignals(False)
-        self.pm.plots[self.selected].line_width = self.line_width
+        self.pm.update_plot_setting(
+            self.selected, 'line_width', self.line_width)
         self.update_plot()
 
     def on_spinbox_line_width_changed(self, val):
@@ -532,44 +540,57 @@ class PlotTab(QWidget):
         self.slider_line_width.blockSignals(True)
         self.slider_line_width.setValue(self.line_width2)
         self.slider_line_width.blockSignals(False)
-        self.pm.plots[self.selected].line_width = self.line_width
+        self.pm.update_plot_setting(
+            self.selected, 'line_width', self.line_width)
         self.update_plot()
 
     def update_plot(self):
         self.pm.normalize()
         self.canvas.ax.axis('on')
         self.canvas.ax.cla()
-        if not self.pm.need_two_axes():
+        if not self.pm.need_twin_axes():
             if self.ax2 is not None:
                 self.ax2.remove()
                 self.ax2 = None
-        self.canvas.ax.grid(self.pm.has_grid)
-        self.canvas.ax.set_title(self.pm.title)
-        self.canvas.ax.set_xlabel(self.pm.label_xaxis)
-        self.canvas.ax.set_ylabel(self.pm.label_yaxis)
+        self.canvas.ax.grid(self.pm.get_grid_state())
+        self.canvas.ax.set_title(self.pm.get_title_settings('title'))
+        self.canvas.ax.set_xlabel(self.pm.get_title_settings('x'))
+        self.canvas.ax.set_ylabel(self.pm.get_title_settings('y'))
 
-        self.canvas.ax.set_xscale('log' if self.pm.is_xlog else 'linear')
-        self.canvas.ax.set_yscale('log' if self.pm.is_y1log else 'linear')
-        if self.pm.need_two_axes():
+        self.canvas.ax.set_xscale(
+            'log' if self.pm.get_logscale_state('x') else 'linear')
+        self.canvas.ax.set_yscale(
+            'log' if self.pm.get_logscale_state('y') else 'linear')
+        if self.pm.need_twin_axes():
             if self.ax2 is None:
                 self.ax2 = self.canvas.ax.twinx()
             else:
                 self.ax2.cla()
-            self.ax2.set_ylabel(self.pm.label_yaxis2)
+            self.ax2.set_ylabel(self.pm.get_title_settings('y2'))
             self.ax2.yaxis.set_label_position('right')
-            self.ax2.set_yscale('log' if self.pm.is_y2log else 'linear')
-            for ip in self.pm.plots:
-                ax = self.canvas.ax if ip.yaxis == 0 else self.ax2
-                ax.plot(ip.x, ip.y, **ip.plot_kwargs())
+            self.ax2.set_yscale(
+                'log' if self.pm.get_logscale_state('y2') else 'linear')
+            for ip in range(self.pm.nplots):
+                if self.pm.get_plot_setting(ip, 'y2') == 0:
+                    ax = self.canvas.ax
+                else:
+                    ax = self.ax2
+                ax.plot(
+                    self.pm.get_xdata(ip),
+                    self.pm.get_ydata(ip),
+                    **self.pm.get_plot_setting(ip, 'kwargs')
+                )
         else:
             self.ax2 = None
-            for ip in self.pm.plots:
-                self.canvas.ax.plot(ip.x, ip.y, **ip.plot_kwargs())
-
-        code = CodeGenerator()
-        self.text_code.setPlainText(code.generate(self.pm))
-
+            for ip in range(self.pm.nplots):
+                self.canvas.ax.plot(
+                    self.pm.get_xdata(ip),
+                    self.pm.get_ydata(ip),
+                    **self.pm.get_plot_setting(ip, 'kwargs')
+                )
         self.canvas.draw()
+
+        self.text_code.setPlainText(self.pm.generate_code())
 
     def on_button_copy_clicked(self):
         clipboard = QApplication.clipboard()
