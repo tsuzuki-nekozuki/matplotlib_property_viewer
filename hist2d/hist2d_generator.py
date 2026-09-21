@@ -1,46 +1,53 @@
 from common.base_generator import BaseGenerator
-from hist2d.hist2d_class import Hist2dManager, Hist2dSettings
+from hist2d.hist2d_settings import Hist2dSettings
 
 
 class Hist2dCodeGenerator(BaseGenerator):
-    def generate(self, manager: Hist2dManager) -> str:
+    def __init__(self, settings: Hist2dSettings):
+        self.settings = settings
+
+    def generate(self) -> str:
         lines = []
 
         lines.append('import matplotlib.pyplot as plt')
+        if self.settings.is_zlog:
+            lines.append('from matplotlib.colors import LogNorm')
+
         lines.append('')
         lines.append('')
 
-        lines.extend(self._write_labels(manager))
-        lines.extend(self._draw_h2(manager))
+        lines.extend(self._write_labels())
+        lines.extend(self._draw_h2())
 
         lines.append('plt.show()')
 
         return '\n'.join(lines)
 
-    def _write_labels(self, manager: Hist2dManager):
+    def _write_labels(self):
         lines = []
         lines.append('fig, ax = plt.subplots()')
-        if manager.title != '':
-            title = f'ax.set_title("{manager.title}")'
+        if self.settings.title != '':
+            title = f'ax.set_title("{self.settings.title}")'
             lines.append(title)
-        if manager.label_xaxis != '':
-            xlabel = f'ax.set_xlabel("{manager.label_xaxis}")'
+        if self.settings.label_xaxis != '':
+            xlabel = f'ax.set_xlabel("{self.settings.label_xaxis}")'
             lines.append(xlabel)
-        if manager.label_yaxis != '':
-            ylabel = f'ax.set_ylabel("{manager.label_yaxis}")'
+        if self.settings.label_yaxis != '':
+            ylabel = f'ax.set_ylabel("{self.settings.label_yaxis}")'
             lines.append(ylabel)
         return lines
 
-    def _draw_h2(self, plot: Hist2dSettings) -> str:
+    def _draw_h2(self) -> str:
         lines = []
         code = (
             'h2 = ax.hist2d(x, y, '
-            f'bins=({plot.xbin_count}, {plot.ybin_count}), '
-            f'range=(({plot.xmin}, {plot.ymax}), ({plot.ymin}, {plot.ymax})), '
-            f'{"norm=LogNorm(), " if plot.is_zlog else ""}'
-            f'cmap="{plot.colormap}")'
+            f'bins=({self.settings.xbin_count}, {self.settings.ybin_count}), '
+            f'range=(({self.settings.xmin}, {self.settings.xmax}), '
+            f'({self.settings.ymin}, {self.settings.ymax})), '
+            f'{"norm=LogNorm(), " if self.settings.is_zlog else ""}'
+            f'cmap="{self.settings.colormap}")'
         )
         lines.append(code)
-        if plot.has_colorbar:
+        if self.settings.has_colorbar:
             lines.append('fig.colorbar(h2[3], ax=ax)')
         return lines

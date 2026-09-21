@@ -5,105 +5,141 @@ import numpy as np
 
 from numpy.typing import NDArray
 
-
-@dataclass
-class Hist2dSettings:
-    xmin: float = field(init=False, default=-100)
-    xmax: float = field(init=False, default=100)
-    ymin: float = field(init=False, default=-100)
-    ymax: float = field(init=False, default=100)
-    n_data: int = field(init=False, default=1000000)
-    colormap: str = field(init=False, default=plt.rcParams['image.cmap'])
-    data: NDArray[np.float64] = field(
-        init=False, default_factory=lambda: np.empty(0, dtype=np.float64))
-
-    def __post_init__(self):
-        self.data = self.generate(
-            self.xmin, self.xmax, self.ymin, self.ymax, self.n_data)
-
-    def generate(
-        self,
-        x_min: float,
-        x_max: float,
-        y_min: float,
-        y_max: float,
-        n_data: int
-    ):
-        n_data = int(n_data)
-        half_x = (x_max - x_min) / 2.
-        half_y = (y_max - y_min) / 2.
-        n_x = np.random.randint(1, 7)
-        n_y = np.random.randint(1, 7)
-        p_x, p_y = self.generate_gaussian_2d(half_x, half_y, n_x, n_y, n_data)
-        p_x = p_x - (x_max + x_min) / 2.
-        p_y = p_y - (y_max + y_min) / 2.
-        return np.array([p_x, p_y]).swapaxes(0, 1)
-
-    def generate_gaussian_2d(
-        self,
-        half_x: float,
-        half_y: float,
-        n_x: int,
-        n_y: int,
-        n_data: int,
-        seed: int | None = None
-    ) -> tuple[np.ndarray, np.ndarray]:
-        rng = np.random.default_rng(seed)
-
-        # Peak positions
-        if n_x == 1:
-            x_peaks = np.array([0])
-            sigma_x = half_x / 2
-        else:
-            x_peaks = np.linspace(- half_x, half_x, n_x)
-            sigma_x = half_x / (n_x - 1) / 2
-
-        if n_y == 1:
-            y_peaks = np.array([0])
-            sigma_y = half_y / 2
-        else:
-            y_peaks = np.linspace(- half_y, half_y, n_y)
-            sigma_y = half_y / (n_y - 1) / 2
-
-        # Select peaks
-        peak_indices = rng.integers(0, n_x * n_y, size=n_data)
-        ix, iy = divmod(peak_indices, n_y)
-
-        # Generate samples
-        x = rng.normal(loc=x_peaks[ix], scale=sigma_x)
-        y = rng.normal(loc=y_peaks[iy], scale=sigma_y)
-
-        return x, y
+from hist2d.hist2d_data import Hist2dData
+from hist2d.hist2d_defaults import default_cmap
+from hist2d.hist2d_generator import Hist2dCodeGenerator
+from hist2d.hist2d_settings import Hist2dSettings
 
 
-@dataclass
 class Hist2dManager:
-    xmin: float = field(init=False, default=-100)
-    xmax: float = field(init=False, default=100)
-    xbin_count: int = field(init=False, default=20)
-    ymin: float = field(init=False, default=-100)
-    ymax: float = field(init=False, default=100)
-    ybin_count: int = field(init=False, default=20)
-    # colormap: str = field(init=False, default=plt.rcParams['image.cmap'])
-    zmin: int = field(init=False, default=0)
-    zmax: int = field(init=False, default=0)
-    title: str = field(init=False, default='')
-    label_xaxis: str = field(init=False, default='')
-    label_yaxis: str = field(init=False, default='')
-    is_zlog: bool = field(init=False, default=False)
-    has_colorbar: bool = field(init=False, default=False)
-    hist: Hist2dSettings = field(init=False, default_factory=Hist2dSettings)
+    def __init__(self):
+        self.default_colormap: str = default_cmap
+        self.data: Hist2dData = Hist2dData()
+        self.settings: Hist2dSettings = Hist2dSettings()
+        self.code: Hist2dCodeGenerator = Hist2dCodeGenerator(self.settings)
 
-    def __post_init__(self):
-        self.generate_data()
+    def generate_data(self):
+        self.data.generate()
 
-    def generate_data(self, n: int = 1000000):
-        self.hist.generate(self.xmin, self.xmax, self.ymin, self.ymax, n)
-    
-    @property
-    def colormap(self) -> str:
-        return self.hist.colormap
+    def set_title_setting(self, item: str, value: str):
+        match item:
+            case 'title':
+                self.settings.title = str(value)
+            case 'x':
+                self.settings.label_xaxis = str(value)
+            case 'y':
+                self.settings.label_yaxis = str(value)
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {item}')
 
-    @colormap.setter
-    def colormap(self, value: str):
-        self.hist.colormap = value
+    def get_title_setting(self, item: str):
+        match item:
+            case 'title':
+                return self.settings.title
+            case 'x':
+                return self.settings.label_xaxis
+            case 'y':
+                return self.settings.label_yaxis
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {item}')
+
+    def set_data_param(self, param: str, value: float | int | str):
+        match param:
+            case 'xmin':
+                self.data.xmin = float(value)
+            case 'xmax':
+                self.data.xmax = float(value)
+            case 'ymin':
+                self.data.ymin = float(value)
+            case 'ymax':
+                self.data.ymax = float(value)
+            case 'n':
+                self.data.ndata = int(value)
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {param}')
+
+    def get_data_param(self, param: str):
+        match param:
+            case 'xmin':
+                return self.data.xmin
+            case 'xmax':
+                return self.data.xmax
+            case 'ymin':
+                return self.data.ymin
+            case 'ymax':
+                return self.data.ymax
+            case 'n':
+                return self.data.ndata
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {param}')
+
+    def set_hist_param(self, param: str, value: float | int | str):
+        match param:
+            case 'xmin':
+                self.settings.xmin = float(value)
+            case 'xmax':
+                self.settings.xmax = float(value)
+            case 'xbin':
+                self.settings.xbin_count = int(value)
+            case 'ymin':
+                self.settings.ymin = float(value)
+            case 'ymax':
+                self.settings.ymax = float(value)
+            case 'ybin':
+                self.settings.ybin_count = int(value)
+            case 'cmap':
+                self.settings.colormap = str(value)
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {param}')
+
+    def get_hist_param(self, param: str):
+        match param:
+            case 'xmin':
+                return self.settings.xmin
+            case 'xmax':
+                return self.settings.xmax
+            case 'xbin':
+                return self.settings.xbin_count
+            case 'ymin':
+                return self.settings.ymin
+            case 'ymax':
+                return self.settings.ymax
+            case 'ybin':
+                return self.settings.ybin_count
+            case 'cmap':
+                return self.settings.colormap
+            case _:
+                raise ValueError(f'Unknown hist2d setting: {param}')
+
+    def reset_range(self):
+        self.settings.xmin = self.data.xmin
+        self.settings.xmax = self.data.xmax
+        self.settings.ymin = self.data.ymin
+        self.settings.ymax = self.data.ymax
+
+    def enable_logz(self, state: bool):
+        self.settings.is_zlog = state
+
+    def get_logz_state(self):
+        return self.settings.is_zlog
+
+    def set_colormap(self, cmap: str):
+        self.settings.colormap = cmap
+
+    def get_colormap(self):
+        return self.settings.colormap
+
+    def enable_colorbar(self, state: bool):
+        self.settings.has_colorbar = state
+
+    def get_colorbar_state(self):
+        return self.settings.has_colorbar
+
+    def get_xdata(self):
+        return self.data.data[:, 0]
+
+    def get_ydata(self):
+        return self.data.data[:, 1]
+
+    def generate_code(self):
+        return self.code.generate()

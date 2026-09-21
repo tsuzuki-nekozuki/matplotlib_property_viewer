@@ -4,23 +4,18 @@ import numpy as np
 
 from matplotlib.colors import LogNorm
 
-from PySide6.QtCore import Qt, QStringListModel, QItemSelectionModel
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QSlider,
+    QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QSpinBox,
     QDoubleSpinBox, QLineEdit, QPushButton, QCheckBox, QListView, QButtonGroup,
-    QPlainTextEdit, QRadioButton, QStackedWidget, QSplitter, QSizePolicy,
-    QApplication
+    QPlainTextEdit, QRadioButton, QSplitter, QSizePolicy, QApplication
 )
 
 from common.aspect_ratio import AspectRatioWidget
 from common.mpl_properties import get_colormap_list
-from hist2d.hist2d_class import Hist2dManager
+from hist2d.hist2d_manager import Hist2dManager
 from hist2d.hist2d_generator import Hist2dCodeGenerator
-from hist2d.hist2_defaults import (ndata_list, default_ndata)
-
-
-def is_integer(s: str) -> bool:
-    return s.lstrip('-').isdigit()
+from hist2d.hist2d_defaults import (ndata_list, default_ndata)
 
 
 class Hist2dTab(QWidget):
@@ -88,7 +83,7 @@ class Hist2dTab(QWidget):
         # x-axis range and binning
         self.spinbox_xmin = QDoubleSpinBox()
         self.spinbox_xmax = QDoubleSpinBox()
-        self.spinbox_xbin_count = QDoubleSpinBox()
+        self.spinbox_xbin_count = QSpinBox()
         self.label_xbin_width_value = QLabel()
         self.construct_xsettings()
 
@@ -100,7 +95,7 @@ class Hist2dTab(QWidget):
         # y-axis range and binning
         self.spinbox_ymin = QDoubleSpinBox()
         self.spinbox_ymax = QDoubleSpinBox()
-        self.spinbox_ybin_count = QDoubleSpinBox()
+        self.spinbox_ybin_count = QSpinBox()
         self.label_ybin_width_value = QLabel()
         self.construct_ysettings()
 
@@ -140,7 +135,7 @@ class Hist2dTab(QWidget):
         self.update_plot()
 
     def construct_data_settings(self):
-        label_data = QLabel('Data range settings')
+        label_data = QLabel('Data generation range')
         label_data.setStyleSheet('font-size: 18px;')
         self.layout_options.addWidget(label_data)
 
@@ -150,22 +145,22 @@ class Hist2dTab(QWidget):
         layout_data1 = QHBoxLayout()
         label_data_xmin = QLabel('x min')
         layout_data1.addWidget(label_data_xmin)
-        self.text_data_xmin.setText(str(self.h2m.hist.xmin))
+        self.text_data_xmin.setText(str(self.h2m.get_data_param('xmin')))
         layout_data1.addWidget(self.text_data_xmin)
         label_data_xmax = QLabel('x max')
         layout_data1.addWidget(label_data_xmax)
-        self.text_data_xmax.setText(str(self.h2m.hist.xmax))
+        self.text_data_xmax.setText(str(self.h2m.get_data_param('xmax')))
         layout_data1.addWidget(self.text_data_xmax)
         self.layout_options.addLayout(layout_data1)
 
         layout_data2 = QHBoxLayout()
         label_data_ymin = QLabel('y min')
         layout_data2.addWidget(label_data_ymin)
-        self.text_data_ymin.setText(str(self.h2m.hist.ymin))
+        self.text_data_ymin.setText(str(self.h2m.get_data_param('ymin')))
         layout_data2.addWidget(self.text_data_ymin)
         label_data_ymax = QLabel('y max')
         layout_data2.addWidget(label_data_ymax)
-        self.text_data_ymax.setText(str(self.h2m.hist.ymax))
+        self.text_data_ymax.setText(str(self.h2m.get_data_param('ymax')))
         layout_data2.addWidget(self.text_data_ymax)
         self.layout_options.addLayout(layout_data2)
 
@@ -184,32 +179,40 @@ class Hist2dTab(QWidget):
 
     def on_button_generate_clicked(self):
         try:
-            self.h2m.hist.xmin = float(self.text_data_xmin.text())
+            xmin = float(self.text_data_xmin.text())
+            xmax = float(self.text_data_xmax.text())
+            ymin = float(self.text_data_ymin.text())
+            ymax = float(self.text_data_ymax.text())
         except ValueError:
-            print('"xmin" should be float.')
-        try:
-            self.h2m.hist.xmax = float(self.text_data_xmax.text())
-        except ValueError:
-            print('"xmax" should be float.')
-        try:
-            self.h2m.hist.ymin = float(self.text_data_ymin.text())
-        except ValueError:
-            print('"ymin" should be float.')
-        try:
-            self.h2m.hist.ymax = float(self.text_data_ymax.text())
-        except ValueError:
-            print('"ymax" should be float.')
+            print('limits should be float.')
+        if xmin > xmax:
+            print('"xmin" should be small smaller than "xmax".')
+            return
+        if ymin > ymax:
+            print('"ymin" should be small smaller than "ymax".')
+            return
+        self.h2m.set_data_param('xmin', xmin)
+        self.h2m.set_data_param('xmax', xmax)
+        self.h2m.set_data_param('ymin', ymin)
+        self.h2m.set_data_param('ymax', ymax)
+
         ndata = self.combobox_ndata.currentText().replace(',', '')
-        self.h2m.hist.n_data = int(ndata)
+        self.h2m.set_data_param('n', ndata)
         self.h2m.generate_data()
-        self.spinbox_xmin.setMinimum(self.h2m.hist.xmin)
-        self.spinbox_xmin.setMaximum(self.h2m.hist.xmax)
-        self.spinbox_xmax.setMinimum(self.h2m.hist.xmin)
-        self.spinbox_xmax.setMaximum(self.h2m.hist.xmax)
-        self.spinbox_ymin.setMinimum(self.h2m.hist.ymin)
-        self.spinbox_ymin.setMaximum(self.h2m.hist.ymax)
-        self.spinbox_ymax.setMinimum(self.h2m.hist.ymin)
-        self.spinbox_ymax.setMaximum(self.h2m.hist.ymax)
+        self.h2m.reset_range()
+
+        self.spinbox_xmin.setMinimum(self.h2m.get_hist_param('xmin'))
+        self.spinbox_xmin.setMaximum(self.h2m.get_hist_param('xmax'))
+        self.spinbox_xmin.setValue(self.h2m.get_hist_param('xmin'))
+        self.spinbox_xmax.setMinimum(self.h2m.get_hist_param('xmin'))
+        self.spinbox_xmax.setMaximum(self.h2m.get_hist_param('xmax'))
+        self.spinbox_xmax.setValue(self.h2m.get_hist_param('xmax'))
+        self.spinbox_ymin.setMinimum(self.h2m.get_hist_param('ymin'))
+        self.spinbox_ymin.setMaximum(self.h2m.get_hist_param('ymax'))
+        self.spinbox_ymin.setValue(self.h2m.get_hist_param('ymin'))
+        self.spinbox_ymax.setMinimum(self.h2m.get_hist_param('ymin'))
+        self.spinbox_ymax.setMaximum(self.h2m.get_hist_param('ymax'))
+        self.spinbox_ymax.setValue(self.h2m.get_hist_param('ymax'))
         self.update_plot()
 
     def construct_title_and_axis(self):
@@ -245,15 +248,15 @@ class Hist2dTab(QWidget):
         self.layout_options.addLayout(layout_yaxis)
 
     def changed_title(self, title):
-        self.h2m.title = title
+        self.h2m.set_title_setting('title', title)
         self.update_plot()
 
     def changed_xaxis(self, xlabel):
-        self.h2m.label_xaxis = xlabel
+        self.h2m.set_title_setting('x', xlabel)
         self.update_plot()
 
     def changed_yaxis(self, ylabel):
-        self.h2m.label_yaxis = ylabel
+        self.h2m.set_title_setting('y', ylabel)
         self.update_plot()
 
     def construct_xsettings(self):
@@ -265,21 +268,21 @@ class Hist2dTab(QWidget):
         label_xmin = QLabel('min')
         layout_xrange1.addWidget(label_xmin)
         self.spinbox_xmin.setFixedWidth(90)
-        self.spinbox_xmin.setMinimum(self.h2m.hist.xmin)
-        self.spinbox_xmin.setMaximum(self.h2m.hist.xmax)
+        self.spinbox_xmin.setMinimum(self.h2m.get_hist_param('xmin'))
+        self.spinbox_xmin.setMaximum(self.h2m.get_hist_param('xmax'))
         self.spinbox_xmin.setDecimals(2)
         self.spinbox_xmin.setSingleStep(0.01)
-        self.spinbox_xmin.setValue(self.h2m.xmin)
+        self.spinbox_xmin.setValue(self.h2m.get_hist_param('xmin'))
         self.spinbox_xmin.valueChanged.connect(self.on_spinbox_xmin_changed)
         layout_xrange1.addWidget(self.spinbox_xmin)
         label_xmax = QLabel('max')
         layout_xrange1.addWidget(label_xmax)
         self.spinbox_xmax.setFixedWidth(90)
-        self.spinbox_xmax.setMinimum(self.h2m.hist.xmin)
-        self.spinbox_xmax.setMaximum(self.h2m.hist.xmax)
+        self.spinbox_xmax.setMinimum(self.h2m.get_hist_param('xmin'))
+        self.spinbox_xmax.setMaximum(self.h2m.get_hist_param('xmax'))
         self.spinbox_xmax.setDecimals(2)
         self.spinbox_xmax.setSingleStep(0.01)
-        self.spinbox_xmax.setValue(self.h2m.xmax)
+        self.spinbox_xmax.setValue(self.h2m.get_hist_param('xmax'))
         self.spinbox_xmax.valueChanged.connect(self.on_spinbox_xmax_changed)
         layout_xrange1.addWidget(self.spinbox_xmax)
         self.layout_options.addLayout(layout_xrange1)
@@ -290,9 +293,8 @@ class Hist2dTab(QWidget):
         self.spinbox_xbin_count.setFixedWidth(90)
         self.spinbox_xbin_count.setMinimum(1)
         self.spinbox_xbin_count.setMaximum(100)
-        self.spinbox_xbin_count.setDecimals(0)
         self.spinbox_xbin_count.setSingleStep(1)
-        self.spinbox_xbin_count.setValue(self.h2m.xbin_count)
+        self.spinbox_xbin_count.setValue(self.h2m.get_hist_param('xbin'))
         self.spinbox_xbin_count.valueChanged.connect(
             self.on_spinbox_xbin_count_changed)
         layout_xrange2.addWidget(self.spinbox_xbin_count)
@@ -306,26 +308,31 @@ class Hist2dTab(QWidget):
         self.layout_options.addLayout(layout_xrange2)
 
     def on_spinbox_xmin_changed(self, val):
-        self.h2m.xmin = val
+        self.h2m.set_hist_param('xmin', val)
         self.xbin_width = self.get_xbin_width()
         self.label_xbin_width_value.setText(f'{self.xbin_width:.2f}')
+        self.spinbox_xmax.setMinimum(val)
         self.update_plot()
 
     def on_spinbox_xmax_changed(self, val):
-        self.h2m.xmax = val
+        self.h2m.set_hist_param('xmax', val)
         self.xbin_width = self.get_xbin_width()
         self.label_xbin_width_value.setText(f'{self.xbin_width:.2f}')
+        self.spinbox_xmin.setMaximum(val)
         self.update_plot()
 
     def on_spinbox_xbin_count_changed(self, val):
-        self.h2m.xbin_count = int(val)
+        self.h2m.set_hist_param('xbin', val)
         if self.xbin_width is not None:
             self.xbin_width = self.get_xbin_width()
         self.label_xbin_width_value.setText(f'{self.xbin_width:.2f}')
         self.update_plot()
 
     def get_xbin_width(self):
-        return (self.h2m.xmax - self.h2m.xmin) / self.h2m.xbin_count
+        xmax = self.h2m.get_hist_param('xmax')
+        xmin = self.h2m.get_hist_param('xmin')
+        xbin = self.h2m.get_hist_param('xbin')
+        return (xmax - xmin) / xbin
 
     def construct_ysettings(self):
         label_yrange = QLabel('y-axis range and binning')
@@ -336,21 +343,21 @@ class Hist2dTab(QWidget):
         label_ymin = QLabel('min')
         layout_yrange1.addWidget(label_ymin)
         self.spinbox_ymin.setFixedWidth(90)
-        self.spinbox_ymin.setMinimum(self.h2m.hist.ymin)
-        self.spinbox_ymin.setMaximum(self.h2m.hist.ymax)
+        self.spinbox_ymin.setMinimum(self.h2m.get_hist_param('ymin'))
+        self.spinbox_ymin.setMaximum(self.h2m.get_hist_param('ymax'))
         self.spinbox_ymin.setDecimals(2)
         self.spinbox_ymin.setSingleStep(0.01)
-        self.spinbox_ymin.setValue(self.h2m.ymin)
+        self.spinbox_ymin.setValue(self.h2m.get_hist_param('ymin'))
         self.spinbox_ymin.valueChanged.connect(self.on_spinbox_ymin_changed)
         layout_yrange1.addWidget(self.spinbox_ymin)
         label_ymax = QLabel('max')
         layout_yrange1.addWidget(label_ymax)
         self.spinbox_ymax.setFixedWidth(90)
-        self.spinbox_ymax.setMinimum(self.h2m.hist.ymin)
-        self.spinbox_ymax.setMaximum(self.h2m.hist.ymax)
+        self.spinbox_ymax.setMinimum(self.h2m.get_hist_param('ymin'))
+        self.spinbox_ymax.setMaximum(self.h2m.get_hist_param('ymax'))
         self.spinbox_ymax.setDecimals(2)
         self.spinbox_ymax.setSingleStep(0.01)
-        self.spinbox_ymax.setValue(self.h2m.ymax)
+        self.spinbox_ymax.setValue(self.h2m.get_hist_param('ymax'))
         self.spinbox_ymax.valueChanged.connect(self.on_spinbox_ymax_changed)
         layout_yrange1.addWidget(self.spinbox_ymax)
         self.layout_options.addLayout(layout_yrange1)
@@ -361,9 +368,8 @@ class Hist2dTab(QWidget):
         self.spinbox_ybin_count.setFixedWidth(90)
         self.spinbox_ybin_count.setMinimum(1)
         self.spinbox_ybin_count.setMaximum(100)
-        self.spinbox_ybin_count.setDecimals(0)
         self.spinbox_ybin_count.setSingleStep(1)
-        self.spinbox_ybin_count.setValue(self.h2m.ybin_count)
+        self.spinbox_ybin_count.setValue(self.h2m.get_hist_param('ybin'))
         self.spinbox_ybin_count.valueChanged.connect(
             self.on_spinbox_ybin_count_changed)
         layout_yrange2.addWidget(self.spinbox_ybin_count)
@@ -377,26 +383,31 @@ class Hist2dTab(QWidget):
         self.layout_options.addLayout(layout_yrange2)
 
     def on_spinbox_ymin_changed(self, val):
-        self.h2m.ymin = val
+        self.h2m.set_hist_param('ymin', val)
         self.ybin_width = self.get_ybin_width()
         self.label_ybin_width_value.setText(f'{self.ybin_width:.2f}')
+        self.spinbox_ymax.setMinimum(val)
         self.update_plot()
 
     def on_spinbox_ymax_changed(self, val):
-        self.h2m.ymax = val
+        self.h2m.set_hist_param('ymax', val)
         self.ybin_width = self.get_ybin_width()
         self.label_ybin_width_value.setText(f'{self.ybin_width:.2f}')
+        self.spinbox_ymin.setMaximum(val)
         self.update_plot()
 
     def on_spinbox_ybin_count_changed(self, val):
-        self.h2m.ybin_count = int(val)
+        self.h2m.set_hist_param('ybin', val)
         if self.ybin_width is not None:
             self.ybin_width = self.get_ybin_width()
         self.label_ybin_width_value.setText(f'{self.ybin_width:.2f}')
         self.update_plot()
 
     def get_ybin_width(self):
-        return (self.h2m.ymax - self.h2m.ymin) / self.h2m.ybin_count
+        ymax = self.h2m.get_hist_param('ymax')
+        ymin = self.h2m.get_hist_param('ymin')
+        ybin = self.h2m.get_hist_param('ybin')
+        return (ymax - ymin) / ybin
 
     def construct_colormap(self):
         label_colormap = QLabel('z-axis settings')
@@ -409,7 +420,7 @@ class Hist2dTab(QWidget):
 
         colormap = get_colormap_list()
         self.combobox_colormap.addItems(colormap)
-        index = self.combobox_colormap.findText(self.h2m.colormap)
+        index = self.combobox_colormap.findText(self.h2m.default_colormap)
         if index >= 0:
             self.combobox_colormap.setCurrentIndex(index)
         self.combobox_colormap.currentTextChanged.connect(
@@ -425,15 +436,15 @@ class Hist2dTab(QWidget):
         self.layout_options.addWidget(self.checkbox_show_colormap)
 
     def on_changed_colormap(self, cmap):
-        self.h2m.colormap = cmap
+        self.h2m.set_colormap(cmap)
         self.update_plot()
 
     def on_toggle_zaxis(self, state):
-        self.h2m.is_zlog = state
+        self.h2m.enable_logz(state)
         self.update_plot()
 
     def on_toggle_show_colormap(self, state):
-        self.h2m.has_colorbar = state
+        self.h2m.enable_colorbar(state)
         self.update_plot()
 
     def update_plot(self):
@@ -443,33 +454,38 @@ class Hist2dTab(QWidget):
 
         self.canvas.ax.axis('on')
         self.canvas.ax.cla()
-        if self.h2m.is_zlog:
+        if self.h2m.get_logz_state():
             h2 = self.canvas.ax.hist2d(
-                self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
-                bins=(self.h2m.xbin_count, self.h2m.ybin_count),
-                range=((self.h2m.xmin, self.h2m.xmax),
-                       (self.h2m.ymin, self.h2m.ymax)),
-                cmap=self.h2m.colormap,
-                norm=LogNorm())
+                self.h2m.get_xdata(), self.h2m.get_ydata(),
+                bins=(self.h2m.get_hist_param('xbin'),
+                      self.h2m.get_hist_param('ybin')),
+                range=((self.h2m.get_hist_param('xmin'),
+                        self.h2m.get_hist_param('xmax')),
+                       (self.h2m.get_hist_param('ymin'),
+                        self.h2m.get_hist_param('ymax'))),
+                cmap=self.h2m.get_hist_param('cmap'),
+                norm=LogNorm()
+            )
         else:
             h2 = self.canvas.ax.hist2d(
-                self.h2m.hist.data[:, 0], self.h2m.hist.data[:, 1],
-                bins=(self.h2m.xbin_count, self.h2m.ybin_count),
-                range=(
-                    (self.h2m.xmin, self.h2m.xmax),
-                    (self.h2m.ymin, self.h2m.ymax)
-                ),
-                cmap=self.h2m.colormap)
-        self.canvas.ax.set_title(self.h2m.title)
-        self.canvas.ax.set_xlabel(self.h2m.label_xaxis)
-        self.canvas.ax.set_ylabel(self.h2m.label_yaxis)
-        if self.h2m.has_colorbar:
+                self.h2m.get_xdata(), self.h2m.get_ydata(),
+                bins=(self.h2m.get_hist_param('xbin'),
+                      self.h2m.get_hist_param('ybin')),
+                range=((self.h2m.get_hist_param('xmin'),
+                        self.h2m.get_hist_param('xmax')),
+                       (self.h2m.get_hist_param('ymin'),
+                        self.h2m.get_hist_param('ymax'))),
+                cmap=self.h2m.get_hist_param('cmap')
+            )
+        self.canvas.ax.set_title(self.h2m.get_title_setting('title'))
+        self.canvas.ax.set_xlabel(self.h2m.get_title_setting('x'))
+        self.canvas.ax.set_ylabel(self.h2m.get_title_setting('y'))
+        if self.h2m.get_colorbar_state():
             self.cbar = self.canvas.fig.colorbar(h2[3], ax=self.canvas.ax)
         else:
             self.cbar = None
 
-        code = Hist2dCodeGenerator()
-        self.text_code.setPlainText(code.generate(self.h2m))
+        self.text_code.setPlainText(self.h2m.generate_code())
 
         self.canvas.draw()
 
