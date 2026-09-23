@@ -1,20 +1,17 @@
-import matplotlib.pyplot as plt
-
 from matplotlib.gridspec import GridSpec
-from PySide6.QtCore import Qt, QStringListModel, QItemSelectionModel
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QSlider,
-    QDoubleSpinBox, QLineEdit, QPushButton, QCheckBox, QListView, QButtonGroup,
-    QPlainTextEdit, QRadioButton, QStackedWidget, QSplitter, QSizePolicy,
-    QApplication, QGroupBox, QGridLayout
+    QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, QComboBox, QGridLayout,
+    QDoubleSpinBox, QLineEdit, QPushButton, QButtonGroup, QRadioButton,
+    QPlainTextEdit, QSplitter, QSizePolicy, QApplication
 )
 
 from common.mpl_properties import (
     get_fonts_list, get_color_list, get_font_style_list, get_font_weight_list
 )
 from common.aspect_ratio import AspectRatioWidget
-from fonts.fonts_class import FontsManager
-from fonts.fonts_generator import FontCodeGenerator
+from fonts.fonts_defaults import font_targets, rcparams
+from fonts.fonts_manager import FontsManager
 
 
 class FontsTab(QWidget):
@@ -22,11 +19,13 @@ class FontsTab(QWidget):
         super().__init__()
 
         # FontsManager
-        self.fontm = FontsManager()
+        self.fm = FontsManager()
+        # target and its default params
+        self.fm.target = next(iter(rcparams))
+        self.def_params = rcparams[self.fm.target]
 
         # text
         self.text_data = 'write your text here.'
-        self.fontm.target = list(self.fontm.default_rcparams.keys())[0]
 
         # Layout
         self.layout = QHBoxLayout()
@@ -55,154 +54,33 @@ class FontsTab(QWidget):
         splitter.setStretchFactor(1, 0)
 
         # text
-        self.label_text = QLabel('Text')
-        self.label_text.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_text)
-
         self.text_edit = QLineEdit()
-        self.text_edit.setText(self.text_data)
-        self.text_edit.textChanged.connect(self.changed_text)
-        self.layout_options.addWidget(self.text_edit)
+        self.construct_text()
 
         hline1 = QFrame()
         hline1.setFrameShape(QFrame.HLine)
         hline1.setFrameShadow(QFrame.Sunken)
         self.layout_options.addWidget(hline1)
 
-        self.label_settings = QLabel('Settings')
-        self.label_settings.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_settings)
-        self.layout_font = QHBoxLayout()
-        self.label_font = QLabel('font')
-        self.layout_font.addWidget(self.label_font)
-        self.combobox_font = QComboBox()
-        font_list = get_fonts_list()
-        self.combobox_font.addItems(font_list)
-        self.combobox_font.setFixedWidth(260)
-        index = self.combobox_font.findText(self.fontm.default_font)
-        if index >= 0:
-            self.combobox_font.setCurrentIndex(index)
-        self.combobox_font.currentTextChanged.connect(self.on_changed_font)
-        self.layout_font.addWidget(self.combobox_font)
-        self.layout_options.addLayout(self.layout_font)
-
-        self.layout_style = QHBoxLayout()
-        self.label_style = QLabel('style')
-        self.layout_style.addWidget(self.label_style)
-        self.combobox_style = QComboBox()
-        style_list = get_font_style_list()
-        self.combobox_style.addItems(style_list)
-        self.combobox_style.setFixedWidth(260)
-        self.layout_style.addWidget(self.combobox_style)
-        self.layout_options.addLayout(self.layout_style)
-
-        # size and weight
-        self.layout_size_weight = QHBoxLayout()
-        self.label_size = QLabel('Size')
-        self.layout_size_weight.addWidget(self.label_size)
-
-        self.spinbox_size = QDoubleSpinBox()
-        self.spinbox_size.setFixedWidth(90)
-        self.spinbox_size.setMinimum(0.1)
-        self.spinbox_size.setMaximum(50)
-        self.spinbox_size.setDecimals(1)
-        self.spinbox_size.setSingleStep(0.1)
-        self.spinbox_size.setValue(self.fontm.default_size)
-        self.spinbox_size.valueChanged.connect(self.on_size_changed)
-        self.layout_size_weight.addWidget(self.spinbox_size)
-
-        self.label_weight = QLabel('Weight')
-        self.layout_size_weight.addWidget(self.label_weight)
-
-        self.combobox_weight = QComboBox()
-        weight_list = get_font_weight_list()
-        self.combobox_weight.addItems(weight_list)
-        self.combobox_weight.setFixedWidth(90)
-        index = self.combobox_weight.findText(self.fontm.default_weight)
-        if index >= 0:
-            self.combobox_weight.setCurrentIndex(index)
-        self.combobox_weight.setFixedWidth(90)
-        self.combobox_weight.currentTextChanged.connect(self.on_weight_changed)
-        self.layout_size_weight.addWidget(self.combobox_weight)
-        self.layout_options.addLayout(self.layout_size_weight)
-
-        # color
-        font_color = get_color_list()
-        self.layout_color1 = QHBoxLayout()
-        self.label_color1 = QLabel('foreground color')
-        self.layout_color1.addWidget(self.label_color1)
-        self.combobox_color1 = QComboBox()
-        self.combobox_color1.setFixedWidth(200)
-        self.combobox_color1.addItems(font_color)
-        for i, icolor in enumerate(font_color):
-            if icolor.startswith('- '):
-                self.combobox_color1.model().item(i).setEnabled(False)
-        self.combobox_color1.currentTextChanged.connect(
-            self.on_foreground_changed)
-        self.layout_color1.addWidget(self.combobox_color1)
-        self.layout_options.addLayout(self.layout_color1)
-
-        self.layout_color2 = QHBoxLayout()
-        self.label_color2 = QLabel('background color')
-        self.layout_color2.addWidget(self.label_color2)
-        self.combobox_color2 = QComboBox()
-        self.combobox_color2.setFixedWidth(200)
-        self.combobox_color2.addItems(['none'] + font_color)
-        for i, icolor in enumerate(['none'] + font_color):
-            if icolor.startswith('- '):
-                self.combobox_color2.model().item(i).setEnabled(False)
-        self.combobox_color2.currentTextChanged.connect(
-            self.on_background_changed)
-        self.layout_color2.addWidget(self.combobox_color2)
-        self.layout_options.addLayout(self.layout_color2)
+        # target
+        self.button_group = QButtonGroup(self)
+        self.button_to_key = {}
+        self.buttons = {}
+        self.construct_target()
 
         hline2 = QFrame()
         hline2.setFrameShape(QFrame.HLine)
         hline2.setFrameShadow(QFrame.Sunken)
         self.layout_options.addWidget(hline2)
 
-        # target
-        self.label_size = QLabel('Target')
-        self.label_size.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_size)
-        font_targets = {
-            'Figure': [
-                ('Figure Title', 'suptitle'),
-            ],
-            'Axes': [
-                ('Title', 'title'),
-                ('X Label', 'xlabel'),
-                ('Y Label', 'ylabel'),
-                ('X Tick Labels', 'xtick'),
-                ('Y Tick Labels', 'ytick'),
-            ],
-            'Other': [
-                ('Legend', 'legend'),
-                ('Colorbar', 'colorbar'),
-                ('Annotation', 'annotation'),
-                ('Text', 'text'),
-            ],
-        }
-        self.layout_target = QGridLayout()
-        self.layout_target.setVerticalSpacing(2)
-        self.layout_target.setHorizontalSpacing(10)
-        self.button_group = QButtonGroup(self)
-        self.button_to_key = {}
-        self.buttons = {}
-        row = 0
-        for category, targets in font_targets.items():
-            category_label = QLabel(category)
-            self.layout_target.addWidget(category_label, row, 0)
-            for i, (label, key) in enumerate(targets):
-                button = QRadioButton(label)
-                self.button_group.addButton(button)
-                self.button_to_key[button] = key
-                self.buttons[key] = button
-                self.layout_target.addWidget(button, row + i, 1)
-            row += len(targets)
-        self.layout_options.addLayout(self.layout_target)
-        self.buttons['suptitle'].setChecked(True)
-        self.button_group.buttonClicked.connect(self.on_target_changed)
+        # settings
+        self.combobox_font = QComboBox()
+        self.combobox_style = QComboBox()
+        self.spinbox_size = QDoubleSpinBox()
+        self.combobox_weight = QComboBox()
+        self.combobox_color1 = QComboBox()
+        self.combobox_color2 = QComboBox()
+        self.construct_settings()
 
         hline3 = QFrame()
         hline3.setFrameShape(QFrame.HLine)
@@ -210,9 +88,9 @@ class FontsTab(QWidget):
         self.layout_options.addWidget(hline3)
 
         # code
-        self.label_code = QLabel('Codes')
-        self.label_code.setStyleSheet('font-size: 18px;')
-        self.layout_options.addWidget(self.label_code)
+        label_code = QLabel('Codes')
+        label_code.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_code)
         self.text_code = QPlainTextEdit()
         self.text_code.setFixedWidth(340)
         self.text_code.setPlainText('This is a text.')
@@ -230,36 +108,188 @@ class FontsTab(QWidget):
         # initial plot
         self.update_plot()
 
+    def construct_text(self):
+        label_text = QLabel('Text')
+        label_text.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_text)
+
+        self.text_edit.setText(self.text_data)
+        self.text_edit.textChanged.connect(self.changed_text)
+        self.layout_options.addWidget(self.text_edit)
+
     def changed_text(self, text):
         self.text_data = text
         self.update_plot()
 
-    def on_changed_font(self, font: str):
-        self.fontm.font = font
-        self.update_plot()
+    def construct_target(self):
+        label_size = QLabel('Target')
+        label_size.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_size)
 
-    def on_button_copy_clicked(self):
-        clipboard = QApplication.clipboard()
-        clipboard.setText(self.text_code.toPlainText())
+        layout_target = QGridLayout()
+        layout_target.setVerticalSpacing(2)
+        layout_target.setHorizontalSpacing(10)
+        row = 0
+        for category, targets in font_targets.items():
+            category_label = QLabel(category)
+            layout_target.addWidget(category_label, row, 0)
+            for i, (label, key) in enumerate(targets):
+                button = QRadioButton(label)
+                self.button_group.addButton(button)
+                self.button_to_key[button] = key
+                self.buttons[key] = button
+                layout_target.addWidget(button, row + i, 1)
+            row += len(targets)
+        self.layout_options.addLayout(layout_target)
+        self.buttons['suptitle'].setChecked(True)
+        self.button_group.buttonClicked.connect(self.on_target_changed)
 
     def on_target_changed(self, button):
-        self.fontm.target = self.button_to_key[button]
+        self.fm.target = self.button_to_key[button]
+        self.def_params = rcparams[self.fm.target]
+        # set defaults
+        index = self.combobox_font.findText(self.def_params['Font Family'])
+        if index >= 0:
+            self.combobox_font.setCurrentIndex(index)
+        index = self.combobox_style.findText(self.def_params['Font Style'])
+        if index >= 0:
+            self.combobox_style.setCurrentIndex(index)
+        self.spinbox_size.setValue(self.def_params['Size'])
+        index = self.combobox_weight.findText(self.def_params['Weight'])
+        if index >= 0:
+            self.combobox_weight.setCurrentIndex(index)
+        color1 = self.def_params['Foreground Color']
+        if color1 == 'auto':
+            color1 = 'black'
+        index = self.combobox_color1.findText(color1)
+        if index >= 0:
+            self.combobox_color1.setCurrentIndex(index)
+        color2 = self.def_params['Background Color']
+        if color2 == 'auto':
+            color2 = 'black'
+        index = self.combobox_color2.findText(color2)
+        if index >= 0:
+            self.combobox_color2.setCurrentIndex(index)
         self.update_plot()
 
-    def on_size_changed(self, size: float):
-        self.fontm.size = size
+    def construct_settings(self):
+        label_settings = QLabel('Settings')
+        label_settings.setStyleSheet('font-size: 18px;')
+        self.layout_options.addWidget(label_settings)
+        layout_font = QHBoxLayout()
+        label_font = QLabel('font')
+        layout_font.addWidget(label_font)
+        font_list = get_fonts_list()
+        self.combobox_font.addItems(font_list)
+        self.combobox_font.setFixedWidth(260)
+        index = self.combobox_font.findText(self.def_params['Font Family'])
+        if index >= 0:
+            self.combobox_font.setCurrentIndex(index)
+        self.combobox_font.currentTextChanged.connect(self.on_changed_font)
+        layout_font.addWidget(self.combobox_font)
+        self.layout_options.addLayout(layout_font)
+
+        layout_style = QHBoxLayout()
+        label_style = QLabel('style')
+        layout_style.addWidget(label_style)
+        style_list = get_font_style_list()
+        self.combobox_style.addItems(style_list)
+        self.combobox_style.setFixedWidth(260)
+        index = self.combobox_style.findText(self.def_params['Font Style'])
+        if index >= 0:
+            self.combobox_style.setCurrentIndex(index)
+        self.combobox_style.currentTextChanged.connect(self.on_changed_style)
+        layout_style.addWidget(self.combobox_style)
+        self.layout_options.addLayout(layout_style)
+
+        # size and weight
+        layout_size_weight = QHBoxLayout()
+        label_size = QLabel('Size')
+        layout_size_weight.addWidget(label_size)
+
+        self.spinbox_size.setFixedWidth(90)
+        self.spinbox_size.setMinimum(0.1)
+        self.spinbox_size.setMaximum(50)
+        self.spinbox_size.setDecimals(1)
+        self.spinbox_size.setSingleStep(0.1)
+        self.spinbox_size.setValue(self.def_params['Size'])
+        self.spinbox_size.valueChanged.connect(self.on_changed_size)
+        layout_size_weight.addWidget(self.spinbox_size)
+
+        label_weight = QLabel('Weight')
+        layout_size_weight.addWidget(label_weight)
+
+        weight_list = get_font_weight_list()
+        self.combobox_weight.addItems(weight_list)
+        self.combobox_weight.setFixedWidth(90)
+        index = self.combobox_weight.findText(self.def_params['Weight'])
+        if index >= 0:
+            self.combobox_weight.setCurrentIndex(index)
+        self.combobox_weight.setFixedWidth(90)
+        self.combobox_weight.currentTextChanged.connect(self.on_changed_weight)
+        layout_size_weight.addWidget(self.combobox_weight)
+        self.layout_options.addLayout(layout_size_weight)
+
+        # color
+        font_color = get_color_list()
+        layout_color1 = QHBoxLayout()
+        label_color1 = QLabel('foreground color')
+        layout_color1.addWidget(label_color1)
+        self.combobox_color1.setFixedWidth(200)
+        self.combobox_color1.addItems(font_color)
+        for i, icolor in enumerate(font_color):
+            if icolor.startswith('- '):
+                self.combobox_color1.model().item(i).setEnabled(False)
+        color1 = self.def_params['Foreground Color']
+        if color1 == 'auto':
+            color1 = 'black'
+        index = self.combobox_color1.findText(color1)
+        if index >= 0:
+            self.combobox_color1.setCurrentIndex(index)
+        self.combobox_color1.currentTextChanged.connect(self.on_changed_color1)
+        layout_color1.addWidget(self.combobox_color1)
+        self.layout_options.addLayout(layout_color1)
+
+        layout_color2 = QHBoxLayout()
+        label_color2 = QLabel('background color')
+        layout_color2.addWidget(label_color2)
+        self.combobox_color2.setFixedWidth(200)
+        self.combobox_color2.addItems(['none'] + font_color)
+        for i, icolor in enumerate(['none'] + font_color):
+            if icolor.startswith('- '):
+                self.combobox_color2.model().item(i).setEnabled(False)
+        color2 = self.def_params['Background Color']
+        if color2 == 'auto':
+            color2 = 'black'
+        index = self.combobox_color2.findText(color2)
+        if index >= 0:
+            self.combobox_color2.setCurrentIndex(index)
+        self.combobox_color2.currentTextChanged.connect(self.on_changed_color2)
+        layout_color2.addWidget(self.combobox_color2)
+        self.layout_options.addLayout(layout_color2)
+
+    def on_changed_font(self, font: str):
+        self.fm.font = font
         self.update_plot()
 
-    def on_weight_changed(self, weight: str):
-        self.fontm.weight = weight
+    def on_changed_style(self, style: str):
+        self.fm.style = style
         self.update_plot()
 
-    def on_foreground_changed(self, color: str):
-        self.fontm.foreground = color
+    def on_changed_size(self, size: float):
+        self.fm.size = size
         self.update_plot()
 
-    def on_background_changed(self, color: str):
-        self.fontm.background = color
+    def on_changed_weight(self, weight: str):
+        self.fm.weight = weight
+        self.update_plot()
+
+    def on_changed_color1(self, color: str):
+        self.fm.foreground = color
+        self.update_plot()
+
+    def on_changed_color2(self, color: str):
+        self.fm.background = color
         self.update_plot()
 
     def update_plot(self):
@@ -268,10 +298,10 @@ class FontsTab(QWidget):
 
         # Layout
         # Target
-        # Default:
+        # User:
         #   settings
         #   preview
-        # User:
+        # Default:
         #   settings
         #   preview
         gs = GridSpec(
@@ -283,17 +313,17 @@ class FontsTab(QWidget):
         )
 
         ax_target = self.canvas.fig.add_subplot(gs[0])
-        ax_default = self.canvas.fig.add_subplot(gs[1])
-        ax_user = self.canvas.fig.add_subplot(gs[2])
+        ax_user = self.canvas.fig.add_subplot(gs[1])
+        ax_default = self.canvas.fig.add_subplot(gs[2])
 
-        for ax in (ax_target, ax_default, ax_user):
+        for ax in (ax_target, ax_user, ax_default):
             ax.axis('off')
 
         # Target
         ax_target.text(
             0.5,
             0.5,
-            f'Target: {self.fontm.target}',
+            f'Target: {self.fm.target}',
             ha='center',
             va='center',
             fontsize=14,
@@ -301,26 +331,26 @@ class FontsTab(QWidget):
             transform=ax_target.transAxes,
         )
 
-        # Default
-        self.draw_font_section(
-            ax_default,
-            title='Default',
-            settings=self.fontm.get_default_settings(),
-        )
-
         # User Setting
         user_settings = {
-            'Font Family': self.fontm.font,
-            'Font Style': self.fontm.style,
-            'Size': self.fontm.size,
-            'Weight': self.fontm.weight,
-            'Foreground Color': self.fontm.foreground,
-            'Background Color': self.fontm.background
+            'Font Family': self.fm.font,
+            'Font Style': self.fm.style,
+            'Size': self.fm.size,
+            'Weight': self.fm.weight,
+            'Foreground Color': self.fm.foreground,
+            'Background Color': self.fm.background
         }
         self.draw_font_section(
             ax_user,
             title='User Setting',
             settings=user_settings,
+        )
+
+        # Default
+        self.draw_font_section(
+            ax_default,
+            title='Default Setting',
+            settings=self.def_params,
         )
 
         self.canvas.fig.subplots_adjust(
@@ -330,10 +360,8 @@ class FontsTab(QWidget):
             bottom=0.05,
         )
 
-        generator = FontCodeGenerator()
-        code = generator.generate(self.fontm.user_settings)
-        self.text_code.setPlainText(code)
         self.canvas.draw()
+        self.text_code.setPlainText(self.fm.generate_code())
 
     def draw_font_section(self, ax, title, settings):
         # Section title / settings / preview
@@ -416,3 +444,7 @@ class FontsTab(QWidget):
             color=color,
             backgroundcolor=settings['Background Color']
         )
+
+    def on_button_copy_clicked(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.text_code.toPlainText())

@@ -1,12 +1,14 @@
 from typing import Callable
 
 from common.base_generator import BaseGenerator
-from fonts.fonts_class import FontsSettings
+from fonts.fonts_settings import FontsSettings
 
 
 class FontCodeGenerator(BaseGenerator):
+    def __init__(self, settings: FontsSettings):
+        self.settings = settings
 
-    def generate(self, settings: FontsSettings) -> str:
+    def generate(self) -> str:
         generators: dict[str, Callable[[FontsSettings], str]] = {
             'suptitle': self._generate_suptitle,
             'title': self._generate_title,
@@ -21,72 +23,64 @@ class FontCodeGenerator(BaseGenerator):
         }
 
         try:
-            generator = generators[settings.target]
+            generator = generators[self.settings.target]
         except KeyError as exc:
             raise ValueError(
-                f'Unsupported font target: {settings.target!r}'
+                f'Unsupported font target: {self.settings.target!r}'
             ) from exc
+        return generator()
 
-        return generator(settings)
-
-    def _generate_suptitle(self, settings: FontsSettings) -> str:
+    def _generate_suptitle(self) -> str:
         return (
             'fig.suptitle(\n'
             "    'Figure Title',\n"
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    def _generate_title(self, settings: FontsSettings) -> str:
+    def _generate_title(self) -> str:
         return (
             'ax.set_title(\n'
             "    'Axes Title',\n"
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    def _generate_xlabel(self, settings: FontsSettings) -> str:
+    def _generate_xlabel(self) -> str:
         return (
             'ax.set_xlabel(\n'
             "    'X Label',\n"
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    def _generate_ylabel(self, settings: FontsSettings) -> str:
+    def _generate_ylabel(self) -> str:
         return (
             'ax.set_ylabel(\n'
             "    'Y Label',\n"
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    def _generate_xtick(self, settings: FontsSettings) -> str:
-        return self._generate_tick_labels(
-            'ax.get_xticklabels()',
-            settings,
-        )
+    def _generate_xtick(self) -> str:
+        return self._generate_tick_labels('ax.get_xticklabels()')
 
-    def _generate_ytick(self, settings: FontsSettings) -> str:
-        return self._generate_tick_labels(
-            'ax.get_yticklabels()',
-            settings,
-        )
+    def _generate_ytick(self) -> str:
+        return self._generate_tick_labels('ax.get_yticklabels()')
 
     def _generate_tick_labels(
         self,
         labels: str,
-        settings: FontsSettings,
     ) -> str:
-        setters = self._format_setters('label', settings)
+        setters = self._format_setters('label')
 
         return (
             f'for label in {labels}:\n'
             f'{self._indent(setters, 4)}'
         )
 
-    def _generate_legend(self, settings: FontsSettings) -> str:
-        setters = self._format_setters('text', settings)
+    def _generate_legend(self) -> str:
+        setters = self._format_setters('text')
 
         return (
             'legend = ax.get_legend()\n'
@@ -95,61 +89,54 @@ class FontCodeGenerator(BaseGenerator):
             f'{self._indent(setters, 8)}'
         )
 
-    def _generate_colorbar(self, settings: FontsSettings) -> str:
-        setters = self._format_setters('label', settings)
+    def _generate_colorbar(self) -> str:
+        setters = self._format_setters('label')
 
         return (
             'for label in colorbar.ax.get_yticklabels():\n'
             f'{self._indent(setters, 4)}'
         )
 
-    def _generate_annotation(self, settings: FontsSettings) -> str:
+    def _generate_annotation(self) -> str:
         return (
             'ax.annotate(\n'
             "    'Annotation',\n"
             '    xy=(0.5, 0.5),\n'
             '    xytext=(0.6, 0.6),\n'
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    def _generate_text(self, settings: FontsSettings) -> str:
+    def _generate_text(self) -> str:
         return (
             'ax.text(\n'
             '    0.5,\n'
             '    0.5,\n'
             "    'Text', \n"
-            f'{self._format_kwargs(settings)}\n'
+            f'{self._format_kwargs()}\n'
             ')'
         )
 
-    @staticmethod
-    def _format_kwargs(settings: FontsSettings) -> str:
+    def _format_kwargs(self) -> str:
         kwargs = [
-            f'    fontfamily={settings.font!r},',
-            f'    fontstyle={settings.style!r},',
-            f'    fontsize={settings.size!r},',
-            f'    fontweight={settings.weight!r},',
-            f'    color={settings.foreground!r},',
-            f'    backgroundcolor={settings.background!r},',
+            f'    fontfamily={self.settings.font!r},',
+            f'    fontstyle={self.settings.style!r},',
+            f'    fontsize={self.settings.size!r},',
+            f'    fontweight={self.settings.weight!r},',
+            f'    color={self.settings.foreground!r},',
+            f'    backgroundcolor={self.settings.background!r},',
         ]
-
         return '\n'.join(kwargs)
 
-    @staticmethod
-    def _format_setters(
-        variable: str,
-        settings: FontsSettings,
-    ) -> str:
+    def _format_setters(self, val: str) -> str:
         setters = [
-            f'{variable}.set_fontfamily({settings.font!r})',
-            f'{variable}.set_fontstyle({settings.style!r})',
-            f'{variable}.set_fontsize({settings.size!r})',
-            f'{variable}.set_fontweight({settings.weight!r})',
-            f'{variable}.set_color({settings.foreground!r})',
-            f'{variable}.set_backgroundcolor({settings.background!r})',
+            f'{val}.set_fontfamily({self.settings.font!r})',
+            f'{val}.set_fontstyle({self.settings.style!r})',
+            f'{val}.set_fontsize({self.settings.size!r})',
+            f'{val}.set_fontweight({self.settings.weight!r})',
+            f'{val}.set_color({self.settings.foreground!r})',
+            f'{val}.set_backgroundcolor({self.settings.background!r})',
         ]
-
         return '\n'.join(setters)
 
     @staticmethod
