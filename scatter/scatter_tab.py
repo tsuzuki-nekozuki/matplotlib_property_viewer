@@ -13,11 +13,15 @@ from common.mpl_properties import (
     get_color_list, get_marker_list, get_line_list, get_colormap_list
 )
 
+from scatter.scatter_manager import ScatterManager
+
 
 class ScatterTab(QWidget):
     def __init__(self, canvas):
         super().__init__()
 
+        # ScatterManager
+        self.sm = ScatterManager()
         # Default plot index
         self.selected = 0
 
@@ -52,6 +56,8 @@ class ScatterTab(QWidget):
         self.spinbox_xmax = QDoubleSpinBox()
         self.spinbox_ymin = QDoubleSpinBox()
         self.spinbox_ymax = QDoubleSpinBox()
+        self.spinbox_zmin = QDoubleSpinBox()
+        self.spinbox_zmax = QDoubleSpinBox()
         self.construct_data_range()
 
         hline1 = QFrame()
@@ -67,7 +73,6 @@ class ScatterTab(QWidget):
         for i in range(3):
             self.data_list.append(f'data{i + 1}')
             self.text_data.append(QLineEdit())
-        # self.construct_scatters_list()
 
         # title and axis
         self.text_title = QLineEdit()
@@ -123,7 +128,7 @@ class ScatterTab(QWidget):
         self.layout_options.addWidget(self.text_code, stretch=1)
         self.button_copy = QPushButton('Copy')
         self.button_copy.setFixedWidth(80)
-        # self.button_copy.clicked.connect(self.on_button_copy_clicked)
+        self.button_copy.clicked.connect(self.on_button_copy_clicked)
         self.layout_options.addWidget(
             self.button_copy, alignment=Qt.AlignRight)
 
@@ -131,8 +136,10 @@ class ScatterTab(QWidget):
         self.layout.addWidget(split_options)
         self.setLayout(self.layout)
 
+        self.sm.generate_data()
+
         # initial plot
-        # self.update_plot()
+        self.update_plot()
 
     def construct_data_range(self):
         label_range = QLabel('Data range (size: 100)')
@@ -143,22 +150,22 @@ class ScatterTab(QWidget):
         label_xmin = QLabel('xmin')
         layout_range1.addWidget(label_xmin)
         self.spinbox_xmin.setFixedWidth(90)
-        self.spinbox_xmin.setMinimum(-50)
+        self.spinbox_xmin.setMinimum(float('-inf'))
         self.spinbox_xmin.setMaximum(50)
         self.spinbox_xmin.setDecimals(2)
         self.spinbox_xmin.setSingleStep(0.01)
         self.spinbox_xmin.setValue(-50)
-        # self.spinbox_xmin.valueChanged.connect(self.on_spinbox_xmin_changed)
+        self.spinbox_xmin.valueChanged.connect(self.on_spinbox_xmin_changed)
         layout_range1.addWidget(self.spinbox_xmin)
         label_xmax = QLabel('xmax')
         layout_range1.addWidget(label_xmax)
         self.spinbox_xmax.setFixedWidth(90)
         self.spinbox_xmax.setMinimum(-50)
-        self.spinbox_xmax.setMaximum(50)
+        self.spinbox_xmax.setMaximum(float('inf'))
         self.spinbox_xmax.setDecimals(2)
         self.spinbox_xmax.setSingleStep(0.01)
         self.spinbox_xmax.setValue(50)
-        # self.spinbox_xmax.valueChanged.connect(self.on_spinbox_xmax_changed)
+        self.spinbox_xmax.valueChanged.connect(self.on_spinbox_xmax_changed)
         layout_range1.addWidget(self.spinbox_xmax)
         self.layout_options.addLayout(layout_range1)
 
@@ -166,24 +173,124 @@ class ScatterTab(QWidget):
         label_ymin = QLabel('ymin')
         layout_range2.addWidget(label_ymin)
         self.spinbox_ymin.setFixedWidth(90)
-        self.spinbox_ymin.setMinimum(-50)
+        self.spinbox_ymin.setMinimum(float('-inf'))
         self.spinbox_ymin.setMaximum(50)
         self.spinbox_ymin.setDecimals(2)
         self.spinbox_ymin.setSingleStep(0.01)
         self.spinbox_ymin.setValue(-50)
-        # self.spinbox_ymin.valueChanged.connect(self.on_spinbox_ymin_changed)
+        self.spinbox_ymin.valueChanged.connect(self.on_spinbox_ymin_changed)
         layout_range2.addWidget(self.spinbox_ymin)
         label_ymax = QLabel('ymax')
         layout_range2.addWidget(label_ymax)
         self.spinbox_ymax.setFixedWidth(90)
         self.spinbox_ymax.setMinimum(-50)
-        self.spinbox_ymax.setMaximum(50)
+        self.spinbox_ymax.setMaximum(float('inf'))
         self.spinbox_ymax.setDecimals(2)
         self.spinbox_ymax.setSingleStep(0.01)
         self.spinbox_ymax.setValue(50)
-        # self.spinbox_ymax.valueChanged.connect(self.on_spinbox_ymax_changed)
+        self.spinbox_ymax.valueChanged.connect(self.on_spinbox_ymax_changed)
         layout_range2.addWidget(self.spinbox_ymax)
         self.layout_options.addLayout(layout_range2)
+
+        layout_range3 = QHBoxLayout()
+        label_zmin = QLabel('zmin')
+        layout_range3.addWidget(label_zmin)
+        self.spinbox_zmin.setFixedWidth(90)
+        self.spinbox_zmin.setMinimum(0)
+        self.spinbox_zmin.setMaximum(float('inf'))
+        self.spinbox_zmin.setDecimals(2)
+        self.spinbox_zmin.setSingleStep(0.01)
+        self.spinbox_zmin.setValue(0)
+        self.spinbox_zmin.valueChanged.connect(self.on_spinbox_zmin_changed)
+        layout_range3.addWidget(self.spinbox_zmin)
+        label_zmax = QLabel('zmax')
+        layout_range3.addWidget(label_zmax)
+        self.spinbox_zmax.setFixedWidth(90)
+        self.spinbox_zmax.setMinimum(0)
+        self.spinbox_zmax.setMaximum(20)
+        self.spinbox_zmax.setDecimals(2)
+        self.spinbox_zmax.setSingleStep(0.01)
+        self.spinbox_zmax.setValue(10)
+        self.spinbox_zmax.valueChanged.connect(self.on_spinbox_zmax_changed)
+        layout_range3.addWidget(self.spinbox_zmax)
+        self.layout_options.addLayout(layout_range3)
+
+    def on_spinbox_xmin_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('xmin', val)
+        if not status:
+            self.sm.set_data_param('xmax', val + 0.01)
+            self.spinbox_xmax.setValue(val + 0.01)
+            self.spinbox_xmax.setMinimum(val + 0.01)
+        else:
+            self.spinbox_xmax.setMinimum(val)
+        self.sm.generate_data()
+        self.update_plot()
+
+    def on_spinbox_xmax_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('xmax', val)
+        if not status:
+            self.sm.set_data_param('xmin', val - 0.01)
+            self.spinbox_xmin.setValue(val - 0.01)
+            self.spinbox_xmin.setMaximum(val - 0.01)
+        else:
+            self.spinbox_xmin.setMaximum(val)
+        self.sm.generate_data()
+        self.update_plot()
+
+    def on_spinbox_ymin_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('ymin', val)
+        if not status:
+            self.sm.set_data_param('ymax', val + 0.01)
+            self.spinbox_ymax.setValue(val + 0.01)
+            self.spinbox_ymax.setMinimum(val + 0.01)
+        else:
+            self.spinbox_ymax.setMinimum(val)
+        self.sm.generate_data()
+        self.update_plot()
+
+    def on_spinbox_ymax_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('ymax', val)
+        if not status:
+            self.sm.set_data_param('ymin', val - 0.01)
+            self.spinbox_xmin.setValue(val - 0.01)
+            self.spinbox_xmin.setMaximum(val - 0.01)
+        else:
+            self.spinbox_xmin.setMaximum(val)
+        self.spinbox_xmax.setMinimum(val)
+        self.sm.generate_data()
+        self.update_plot()
+
+    def on_spinbox_zmin_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('zmin', val)
+        if not status:
+            self.sm.set_data_param('zmax', val + 0.01)
+            self.spinbox_zmax.setValue(val + 0.01)
+            self.spinbox_zmax.setMinimum(val + 0.01)
+        else:
+            self.spinbox_zmax.setMinimum(val)
+        self.sm.generate_data()
+        self.update_plot()
+
+    def on_spinbox_zmax_changed(self, val):
+        val = float(val)
+        status = self.sm.set_data_param('zmax', val)
+        if not status:
+            status2 = self.sm.set_data_param('zmin', val - 0.01)
+            if status2:
+                self.spinbox_zmin.setValue(val - 0.01)
+                self.spinbox_zmin.setMaximum(val - 0.01)
+            else:
+                return
+        else:
+            self.spinbox_zmin.setMaximum(val)
+        self.spinbox_zmin.setMaximum(val)
+        self.sm.generate_data()
+        self.update_plot()
 
     def construct_title_and_axis(self):
         label_title_and_axis = QLabel('Title and Axis')
@@ -195,7 +302,7 @@ class ScatterTab(QWidget):
         label_text_title.setFixedWidth(50)
         layout_title.addWidget(label_text_title)
         self.text_title.setFixedWidth(240)
-        # self.text_title.textChanged.connect(self.changed_title)
+        self.text_title.textChanged.connect(self.changed_title)
         layout_title.addWidget(self.text_title)
         self.layout_options.addLayout(layout_title)
 
@@ -204,7 +311,7 @@ class ScatterTab(QWidget):
         label_text_xaxis.setFixedWidth(50)
         layout_xaxis.addWidget(label_text_xaxis)
         self.text_xaxis.setFixedWidth(240)
-        # self.text_xaxis.textChanged.connect(self.changed_xaxis)
+        self.text_xaxis.textChanged.connect(self.changed_xaxis)
         layout_xaxis.addWidget(self.text_xaxis)
         self.layout_options.addLayout(layout_xaxis)
 
@@ -213,20 +320,44 @@ class ScatterTab(QWidget):
         label_text_yaxis.setFixedWidth(50)
         layout_yaxis.addWidget(label_text_yaxis)
         self.text_yaxis.setFixedWidth(240)
-        # self.text_yaxis.textChanged.connect(self.changed_yaxis)
+        self.text_yaxis.textChanged.connect(self.changed_yaxis)
         layout_yaxis.addWidget(self.text_yaxis)
         self.layout_options.addLayout(layout_yaxis)
 
         layout_plot_setting = QVBoxLayout()
         layout_grid_axes = QHBoxLayout()
-        # self.checkbox_grid.stateChanged.connect(self.on_toggle_grid)
+        self.checkbox_grid.stateChanged.connect(self.on_toggle_grid)
         layout_grid_axes.addWidget(self.checkbox_grid)
-        # self.checkbox_xaxis_logscale.stateChanged.connect(self.on_toggle_xaxis)
+        self.checkbox_xaxis_logscale.stateChanged.connect(self.on_toggle_xaxis)
         layout_grid_axes.addWidget(self.checkbox_xaxis_logscale)
-        # self.checkbox_yaxis_logscale.stateChanged.connect(self.on_toggle_yaxis)
+        self.checkbox_yaxis_logscale.stateChanged.connect(self.on_toggle_yaxis)
         layout_grid_axes.addWidget(self.checkbox_yaxis_logscale)
         layout_plot_setting.addLayout(layout_grid_axes)
         self.layout_options.addLayout(layout_plot_setting)
+
+    def changed_title(self, title):
+        self.sm.set_title_setting('title', title)
+        self.update_plot()
+
+    def changed_xaxis(self, xlabel):
+        self.sm.set_title_setting('x', xlabel)
+        self.update_plot()
+
+    def changed_yaxis(self, ylabel):
+        self.sm.set_title_setting('y', ylabel)
+        self.update_plot()
+
+    def on_toggle_grid(self, state):
+        self.sm.enable_grid(state)
+        self.update_plot()
+
+    def on_toggle_xaxis(self, state):
+        self.sm.enable_logscale('x', state)
+        self.update_plot()
+
+    def on_toggle_yaxis(self, state):
+        self.sm.enable_logscale('y', state)
+        self.update_plot()
 
     def construct_scatter_options(self):
         self.construct_types_selection()
@@ -241,7 +372,7 @@ class ScatterTab(QWidget):
         label_selected = QLabel('Selected data')
         layout_data.addWidget(label_selected)
         self.combobox_data.addItems(self.data_list)
-        # self.combobox_data.currentTextChanged.connect(self.on_changed_data)
+        self.combobox_data.currentTextChanged.connect(self.on_changed_data)
         layout_data.addWidget(self.combobox_data)
         self.layout_options.addLayout(layout_data)
 
@@ -279,6 +410,9 @@ class ScatterTab(QWidget):
             'Note: Common color setting, if "colormap" is selected.')
         label_attention.setStyleSheet('font-size: 10px;')
         self.layout_options.addWidget(label_attention, alignment=Qt.AlignRight)
+
+    def on_changed_data(self, i):
+        self.selected = int(i)
 
     def construct_marker(self):
         label_marker = QLabel('Marker')
@@ -409,3 +543,32 @@ class ScatterTab(QWidget):
             self.spinbox_vmin.setEnabled(True)
             self.spinbox_vmax.setEnabled(True)
             self.combobox_marker_color1.setEnabled(False)
+
+    def update_plot(self):
+        self.canvas.ax.axis('on')
+        self.canvas.ax.cla()
+
+        self.canvas.ax.set_title(self.sm.get_title_setting('title'))
+        self.canvas.ax.set_xlabel(self.sm.get_title_setting('x'))
+        self.canvas.ax.set_ylabel(self.sm.get_title_setting('y'))
+
+        self.canvas.ax.grid(self.sm.get_grid_state())
+        self.canvas.ax.set_xscale(
+            'log' if self.sm.get_logscale_state('x') else 'linear')
+        self.canvas.ax.set_yscale(
+            'log' if self.sm.get_logscale_state('y') else 'linear')
+
+        self.canvas.ax.scatter(
+            self.sm.data.get_data(0, 'x'),
+            self.sm.data.get_data(0, 'y')
+        )
+        self.canvas.ax.scatter(
+            self.sm.data.get_data(1, 'x'),
+            self.sm.data.get_data(1, 'y')
+        )
+
+        self.canvas.draw()
+
+    def on_button_copy_clicked(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.text_code.toPlainText())
